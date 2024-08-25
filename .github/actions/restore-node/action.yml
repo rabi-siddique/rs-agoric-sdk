@@ -111,6 +111,10 @@ runs:
       shell: bash
       run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
+    # Before setup-node because that action runs `yarn cache dir`. See https://github.com/actions/setup-node/issues/480#issuecomment-1915448139
+    - run: corepack enable
+      shell: bash
+
     - uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
@@ -121,9 +125,6 @@ runs:
 
     - uses: kenchan0130/actions-system-info@master
       id: system-info
-
-    - run: corepack enable
-      shell: bash
 
     - name: restore built files
       id: built
@@ -182,7 +183,7 @@ runs:
         date > node_modules/.cache/agoric/yarn-built
 
     - name: Validate Git Tree Cleanliness
-      uses: pyTooling/Actions/with-post-step@v0.4.5
+      uses: pyTooling/Actions/with-post-step@v1.0.7
       with:
         main: |
           bash "$SRC/.github/actions/restore-node/check-git-status.sh" "$SRC" "$IGNORE_DIRTY_YARN_LOCK"
