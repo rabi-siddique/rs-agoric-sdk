@@ -49,6 +49,7 @@ import { makeTimestampHelper } from '../utils/time.js';
  * @import {ResponseQuery} from '@agoric/cosmic-proto/tendermint/abci/types.js';
  * @import {JsonSafe} from '@agoric/cosmic-proto';
  * @import {Matcher} from '@endo/patterns';
+ * @import {LocalIbcAddress, RemoteIbcAddress} from '@agoric/vats/tools/ibc-utils.js';
  */
 
 const trace = makeTracer('ComosOrchestrationAccountHolder');
@@ -65,10 +66,19 @@ const { Vow$ } = NetworkShape; // TODO #9611
  *   topicKit: RecorderKit<ComosOrchestrationAccountNotification>;
  *   account: IcaAccount;
  *   chainAddress: ChainAddress;
+ *   localAddress: LocalIbcAddress;
+ *   remoteAddress: RemoteIbcAddress;
  *   icqConnection: ICQConnection | undefined;
  *   bondDenom: string;
  *   timer: Remote<TimerService>;
  * }} State
+ */
+
+/**
+ * @typedef {{
+ *   localAddress: LocalIbcAddress;
+ *   remoteAddress: RemoteIbcAddress;
+ * }} CosmosOrchestrationAccountStorageState
  */
 
 /** @see {OrchestrationAccountI} */
@@ -85,6 +95,8 @@ export const IcaAccountHolderI = M.interface('IcaAccountHolder', {
   ),
   withdrawRewards: M.call().returns(Vow$(M.arrayOf(DenomAmountShape))),
   undelegate: M.call(M.arrayOf(DelegationShape)).returns(VowShape),
+  deactivate: M.call().returns(VowShape),
+  reactivate: M.call().returns(VowShape),
 });
 
 /** @type {{ [name: string]: [description: string, valueShape: Matcher] }} */
@@ -167,7 +179,8 @@ export const prepareCosmosOrchestrationAccountKit = (
         ).returns(M.promise()),
         WithdrawReward: M.call(ChainAddressShape).returns(M.promise()),
         Undelegate: M.call(M.arrayOf(DelegationShape)).returns(M.promise()),
-        CloseAccount: M.call().returns(M.promise()),
+        DeactivateAccount: M.call().returns(M.promise()),
+        ReactivateAccount: M.call().returns(M.promise()),
         TransferAccount: M.call().returns(M.promise()),
         Send: M.call().returns(M.promise()),
         SendAll: M.call().returns(M.promise()),
@@ -175,8 +188,11 @@ export const prepareCosmosOrchestrationAccountKit = (
       }),
     },
     /**
-     * @param {ChainAddress} chainAddress
-     * @param {string} bondDenom e.g. 'uatom'
+     * @param {object} info
+     * @param {ChainAddress} info.chainAddress
+     * @param {string} info.bondDenom e.g. 'uatom'
+     * @param {LocalIbcAddress} info.localAddress
+     * @param {RemoteIbcAddress} info.remoteAddress
      * @param {object} io
      * @param {IcaAccount} io.account
      * @param {Remote<StorageNode>} io.storageNode
@@ -184,14 +200,29 @@ export const prepareCosmosOrchestrationAccountKit = (
      * @param {Remote<TimerService>} io.timer
      * @returns {State}
      */
-    (chainAddress, bondDenom, io) => {
+    ({ chainAddress, bondDenom, localAddress, remoteAddress }, io) => {
       const { storageNode, ...rest } = io;
       // must be the fully synchronous maker because the kit is held in durable state
       const topicKit = makeRecorderKit(storageNode, PUBLIC_TOPICS.account[1]);
       // TODO determine what goes in vstorage https://github.com/Agoric/agoric-sdk/issues/9066
-      void E(topicKit.recorder).write('');
+      // XXX consider parsing local/remoteAddr to portId, channelId, counterpartyPortId, counterpartyChannelId, connectionId, counterpartyConnectionId
+      // FIXME these values will not update if IcaAccount gets new values after reopening.
+      // consider having IcaAccount responsible for the owning the writer. It might choose to share it with COA.
+      void E(topicKit.recorder).write(
+        /** @type {CosmosOrchestrationAccountStorageState} */ ({
+          localAddress,
+          remoteAddress,
+        }),
+      );
 
-      return { chainAddress, bondDenom, topicKit, ...rest };
+      return {
+        chainAddress,
+        bondDenom,
+        localAddress,
+        remoteAddress,
+        topicKit,
+        ...rest,
+      };
     },
     {
       helper: {
@@ -358,8 +389,17 @@ export const prepareCosmosOrchestrationAccountKit = (
             return watch(this.facets.holder.undelegate(delegations));
           }, 'Undelegate');
         },
-        CloseAccount() {
-          throw Error('not yet implemented');
+        DeactivateAccount() {
+          return zcf.makeInvitation(seat => {
+            seat.exit();
+            return watch(this.facets.holder.deactivate());
+          }, 'DeactivateAccount');
+        },
+        ReactivateAccount() {
+          return zcf.makeInvitation(seat => {
+            seat.exit();
+            return watch(this.facets.holder.reactivate());
+          }, 'ReactivateAccount');
         },
         Send() {
           /**
@@ -659,6 +699,14 @@ export const prepareCosmosOrchestrationAccountKit = (
             );
             return watch(undelegateV, this.facets.returnVoidWatcher);
           });
+        },
+        /** @type {HostOf<IcaAccount['deactivate']>} */
+        deactivate() {
+          return watch(E(this.facets.helper.owned()).deactivate());
+        },
+        /** @type {HostOf<IcaAccount['reactivate']>} */
+        reactivate() {
+          return watch(E(this.facets.helper.owned()).reactivate());
         },
       },
     },
