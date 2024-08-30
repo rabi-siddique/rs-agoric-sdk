@@ -1,30 +1,18 @@
 import anyTest from '@endo/ses-ava/prepare-endo.js';
 import type { TestFn } from 'ava';
-import { commonSetup, SetupContextWithWallets } from './support.js';
+import {
+  commonSetup,
+  SetupContextWithWallets,
+  FAUCET_POUR,
+} from './support.js';
 import { makeDoOffer } from '../tools/e2e-tools.js';
 import { makeQueryClient } from '../tools/query.js';
-import { sleep, type RetryOptions } from '../tools/sleep.js';
+import { sleep } from '../tools/sleep.js';
+import { STAKING_REWARDS_TIMEOUT } from './config.js';
 
 const test = anyTest as TestFn<SetupContextWithWallets>;
 
 const accounts = ['user1', 'user2'];
-
-/**
- * Wait 90 seconds to ensure staking rewards are available.
- *
- * While we expect staking rewards to be available after a
- * single block (~5-12 seconds for most chains), this provide additional
- * padding after observed failures in CI
- * (https://github.com/Agoric/agoric-sdk/issues/9934).
- *
- * A more robust approach might consider Distribution params and the
- * {@link FAUCET_POUR} constant to determine how many blocks it should take for
- * rewards to be available.
- */
-export const STAKING_REWARDS_TIMEOUT: RetryOptions = {
-  retryIntervalMs: 5000,
-  maxRetries: 18,
-};
 
 test.before(async t => {
   const { deleteTestKeys, setupTestKeys, ...rest } = await commonSetup(t);
@@ -34,8 +22,6 @@ test.before(async t => {
   const wallets = await setupTestKeys(accounts);
   t.context = { ...rest, wallets, deleteTestKeys };
 });
-
-const FAUCET_POUR = 10000000000n;
 
 test.after(async t => {
   const { deleteTestKeys } = t.context;

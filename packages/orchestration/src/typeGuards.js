@@ -4,9 +4,10 @@ import { M } from '@endo/patterns';
 
 /**
  * @import {TypedPattern} from '@agoric/internal';
- * @import {ChainAddress, CosmosAssetInfo, ChainInfo, CosmosChainInfo, DenomAmount} from './types.js';
+ * @import {ChainAddress, CosmosAssetInfo, Chain, ChainInfo, CosmosChainInfo, DenomAmount, DenomDetail, DenomInfo} from './types.js';
  * @import {Delegation} from '@agoric/cosmic-proto/cosmos/staking/v1beta1/staking.js';
  * @import {TxBody} from '@agoric/cosmic-proto/cosmos/tx/v1beta1/tx.js';
+ * @import {TypedJson} from '@agoric/cosmic-proto';
  */
 
 /**
@@ -110,8 +111,14 @@ export const ChainInfoShape = M.splitRecord({
 });
 export const LocalChainAccountShape = M.remotable('LocalChainAccount');
 export const DenomShape = M.string();
-// TODO define for #9211
-export const BrandInfoShape = M.any();
+
+/** @type {TypedPattern<DenomInfo<any, any>>} */
+export const DenomInfoShape = {
+  chain: M.remotable('Chain'),
+  base: M.remotable('Chain'),
+  brand: M.or(M.remotable('Brand'), M.undefined()),
+  baseDenom: M.string(),
+};
 
 /** @type {TypedPattern<DenomAmount>} */
 export const DenomAmountShape = { denom: DenomShape, value: M.bigint() };
@@ -123,14 +130,14 @@ export const ICQMsgShape = M.splitRecord(
   { height: M.string(), prove: M.boolean() },
 );
 
+/** @type {TypedPattern<TypedJson>} */
+export const TypedJsonShape = M.splitRecord({ '@type': M.string() });
+
+/** @see {Chain} */
 export const chainFacadeMethods = harden({
   getChainInfo: M.call().returns(VowShape),
   makeAccount: M.call().returns(VowShape),
-  query: M.call(M.arrayOf(ICQMsgShape)).returns(VowShape),
 });
-
-/** @see {Chain} */
-export const ChainFacadeI = M.interface('ChainFacade', chainFacadeMethods);
 
 /**
  * for google/protobuf/timestamp.proto, not to be confused with TimestampShape
