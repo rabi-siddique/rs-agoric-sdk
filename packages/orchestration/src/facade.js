@@ -78,6 +78,11 @@ export const makeOrchestrationFacade = ({
     const [wrappedCtx] = prepareEndowment(subZone, 'endowments', [hostCtx]);
     const hostFn = asyncFlow(subZone, 'asyncFlow', guestFn);
 
+    deepMapObject(
+      wrappedCtx,
+      val => val === zcf && assert.fail('do not pass zcf'),
+    );
+
     // cast because return could be arbitrary subtype
     const orcFn = /** @type {HostForGuest<GF>} */ (
       (...args) => {
