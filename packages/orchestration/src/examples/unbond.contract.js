@@ -27,8 +27,14 @@ import * as flows from './unbond.flows.js';
  * @param {Zone} zone
  * @param {OrchestrationTools} tools
  */
-const contract = async (zcf, privateArgs, zone, { orchestrateAll }) => {
-  const { unbondAndLiquidStake } = orchestrateAll(flows, { zcf });
+const contract = async (
+  zcf,
+  privateArgs,
+  zone,
+  { orchestrateAll, zcfForFlows },
+) => {
+  // TODO: figure out Guarded<ZcfForFlows> vs. ZcfForFlows
+  const { unbondAndLiquidStake } = orchestrateAll(flows, { zcfForFlows });
 
   const publicFacet = zone.exo('publicFacet', undefined, {
     makeUnbondAndLiquidStakeInvitation() {

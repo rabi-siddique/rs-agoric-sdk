@@ -1,5 +1,5 @@
 /**
- * @import {Orchestrator, OrchestrationFlow} from '../types.js'
+ * @import {Orchestrator, OrchestrationFlow, ZcfForFlows} from '../types.js'
  * @import {TimerService} from '@agoric/time';
  * @import {LocalChain} from '@agoric/vats/src/localchain.js';
  * @import {NameHub} from '@agoric/vats';
@@ -13,17 +13,17 @@
  * @satisfies {OrchestrationFlow}
  * @param {Orchestrator} orch
  * @param {object} ctx
- * @param {ZCF} ctx.zcf
+ * @param {ZcfForFlows} ctx.zcfForFlows
  * @param {ZCFSeat} _seat
  * @param {undefined} _offerArgs
  */
 export const unbondAndLiquidStake = async (
   orch,
-  { zcf },
+  { zcfForFlows },
   _seat,
   _offerArgs,
 ) => {
-  console.log('zcf within the membrane', zcf);
+  console.log('zcf within the membrane', zcfForFlows);
   // Osmosis is one of the few chains with icqEnabled
   const osmosis = await orch.getChain('osmosis');
   // In a real world scenario, accounts would be re-used across invokations of the handler
