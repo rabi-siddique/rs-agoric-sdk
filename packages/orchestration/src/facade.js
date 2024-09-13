@@ -80,7 +80,9 @@ export const makeOrchestrationFacade = ({
 
     deepMapObject(
       wrappedCtx,
-      val => val === zcf && assert.fail('do not pass zcf'),
+      val =>
+        val === zcf &&
+        assert.fail('do not use zcf in orchestration context; try zcfForFlows'),
     );
 
     // cast because return could be arbitrary subtype
