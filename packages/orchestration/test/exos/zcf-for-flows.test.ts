@@ -46,7 +46,7 @@ const test = anyTest as TestFn<TestContext>;
 
 test.before('set up context', async t => (t.context = await makeTestContext()));
 
-test('yes as is: atomicRearrange(), ... getTerms()', async t => {
+test('unchanged: atomicRearrange(), ... getTerms()', async t => {
   const { zcf, zcfLtd } = t.context;
 
   t.notThrows(() => zcfLtd.atomicRearrange([]));
@@ -57,7 +57,7 @@ test('yes as is: atomicRearrange(), ... getTerms()', async t => {
   t.deepEqual(zcfLtd.getTerms(), zcf.getTerms());
 });
 
-test('makeEmptySeatKit: remove userSeat', async t => {
+test('changed: makeEmptySeatKit: remove userSeat', async t => {
   const { zcf, zcfLtd } = t.context;
 
   const kit = zcfLtd.makeEmptySeatKit();
@@ -67,7 +67,7 @@ test('makeEmptySeatKit: remove userSeat', async t => {
   t.falsy(zcfSeat.hasExited(), 'zcfSeat works as usual');
 });
 
-test('makeInvitation: watch promise', async t => {
+test('changed: makeInvitation: watch promise', async t => {
   const { zoe, zcf, zcfLtd, vt } = t.context;
 
   const handler = Far('Trade', { handle: seat => {} });
@@ -78,7 +78,7 @@ test('makeInvitation: watch promise', async t => {
   t.like(amt, { value: [{ description: 'trade' }] });
 });
 
-test('makeInvitation: non-passable handler', async t => {
+test('changed: makeInvitation: non-passable handler', async t => {
   const { zoe, zcf, zcfLtd, vt } = t.context;
 
   const toTradeVow = zcfLtd.makeInvitation(_seat => {}, 'trade');
@@ -88,7 +88,7 @@ test('makeInvitation: non-passable handler', async t => {
   t.like(amt, { value: [{ description: 'trade' }] });
 });
 
-test('makeZCFMint - watch', async t => {
+test('changed: makeZCFMint - watch', async t => {
   const { zcf, zcfLtd, vt } = t.context;
 
   const m1Vow = zcfLtd.makeZCFMint('M1');
@@ -108,7 +108,7 @@ test('makeZCFMint - watch', async t => {
   t.like(aSeat.getCurrentAllocation(), { Out: { value: 123n } });
 });
 
-test('no: saveIssuer(), ... getOfferFilter()', async t => {
+test('removed: saveIssuer(), ... getOfferFilter()', async t => {
   const { zcfLtd, stuff, feeMintAccess } = t.context;
 
   // @ts-expect-error
