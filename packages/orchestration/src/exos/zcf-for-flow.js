@@ -8,7 +8,7 @@ import { VowShape } from '@agoric/vow';
 
 import { M } from '@endo/patterns';
 
-export const ZcfI = M.interface(
+export const ZcfForFlowsI = M.interface(
   'ZCF',
   {
     makeInvitation: M.call(M.raw(), M.string())
@@ -26,7 +26,7 @@ export const ZcfI = M.interface(
  * @param {VowTools} vowTools
  */
 export const prepareZcfForFlows = (zcf, zone, vowTools) => {
-  const zcfForFlows = zone.exo('ZcfForFlows', ZcfI, {
+  const zcfForFlows = zone.exo('ZcfForFlows', ZcfForFlowsI, {
     /**
      * Like {@link ZCF.makeEmptySeatKit}, but no userSeat is returned.
      *
