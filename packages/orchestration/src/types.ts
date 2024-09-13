@@ -18,7 +18,23 @@ export type * from './vat-orchestration.js';
 /**
  * Partial Zoe Contract Facet ({@link ZCF}) for use in {@link OrchestrationFlow}s.
  *
- * @see {@link HostOf} for the analogy between `Promise` and `Vow`.
  * @interface
  */
-export type ZcfForFlows = ReturnType<typeof prepareZcfForFlows>;
+export type ZcfForFlows<CT = Record<string, unknown>> = Pick<
+  ZCF<CT>,
+  'atomicRearrange' | 'assertUniqueKeyword' | 'getTerms'
+> & {
+  makeZCFMint: <K_2 extends AssetKind = 'nat'>(
+    keyword: Keyword,
+    assetKind?: K_2 | undefined,
+    displayInfo?: AdditionalDisplayInfo,
+    options?: import('@agoric/ertp').IssuerOptionsRecord,
+  ) => Promise<ZCFMint<K_2>>;
+  makeEmptySeatKit: (exit?: ExitRule) => { zcfSeat: ZCFSeat };
+  makeInvitation: <R, A = undefined>(
+    offerHandler: OfferHandler<ERef<R>, A>,
+    description: string,
+    customDetails?: object,
+    proposalShape?: Pattern,
+  ) => Promise<Invitation<R, A>>;
+};

@@ -33,7 +33,6 @@ const contract = async (
   zone,
   { orchestrateAll, zcfForFlows },
 ) => {
-  // TODO: figure out Guarded<ZcfForFlows> vs. ZcfForFlows
   const { unbondAndLiquidStake } = orchestrateAll(flows, { zcfForFlows });
 
   const publicFacet = zone.exo('publicFacet', undefined, {

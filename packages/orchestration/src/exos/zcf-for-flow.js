@@ -1,9 +1,10 @@
 import { VowShape } from '@agoric/vow';
 
 /**
- * @import {HostOf} from '@agoric/async-flow';
+ * @import {HostInterface, HostOf} from '@agoric/async-flow';
  * @import {VowTools} from '@agoric/vow';
  * @import {Zone} from '@agoric/zone';
+ * @import {ZcfForFlows} from '../types.js';
  */
 
 import { M } from '@endo/patterns';
@@ -26,6 +27,7 @@ export const ZcfForFlowsI = M.interface(
  * @param {VowTools} vowTools
  */
 export const prepareZcfForFlows = (zcf, zone, vowTools) => {
+  /** @satisfies {HostInterface<ZcfForFlows>} */
   const zcfForFlows = zone.exo('ZcfForFlows', ZcfForFlowsI, {
     /**
      * Like {@link ZCF.makeEmptySeatKit}, but no userSeat is returned.
@@ -38,9 +40,14 @@ export const prepareZcfForFlows = (zcf, zone, vowTools) => {
     },
 
     /** @type {HostOf<ZCF['makeInvitation']>} */
-    makeInvitation(offerHandler, description, customDetails) {
+    makeInvitation(offerHandler, description, customDetails, proposalShape) {
       return vowTools.watch(
-        zcf.makeInvitation(offerHandler, description, customDetails),
+        zcf.makeInvitation(
+          offerHandler,
+          description,
+          customDetails,
+          proposalShape,
+        ),
       );
     },
     /** @type {HostOf<ZCF['makeZCFMint']>} */
@@ -52,13 +59,13 @@ export const prepareZcfForFlows = (zcf, zone, vowTools) => {
 
     /** @type {ZCF['atomicRearrange']} */
     atomicRearrange(transfers) {
-      return zcf.atomicRearrange(transfers);
+      zcf.atomicRearrange(transfers);
     },
     /** @type {ZCF['assertUniqueKeyword']} */
     assertUniqueKeyword(keyword) {
-      return zcf.assertUniqueKeyword(keyword);
+      zcf.assertUniqueKeyword(keyword);
     },
-    /** @type {ZCF['getTerms']} */
+    /** @type {HostOf<ZCF['getTerms']>} */
     getTerms() {
       return zcf.getTerms();
     },
