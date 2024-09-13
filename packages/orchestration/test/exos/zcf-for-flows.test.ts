@@ -78,14 +78,12 @@ test('changed: makeInvitation: watch promise', async t => {
   t.like(amt, { value: [{ description: 'trade' }] });
 });
 
-test('changed: makeInvitation: non-passable handler', async t => {
-  const { zoe, zcf, zcfLtd, vt } = t.context;
+test('removed: makeInvitation: non-passable handler', async t => {
+  const { zcfLtd } = t.context;
 
-  const toTradeVow = zcfLtd.makeInvitation(_seat => {}, 'trade');
-
-  const toTrade = await vt.when(toTradeVow);
-  const amt = await E(E(zoe).getInvitationIssuer()).getAmountOf(toTrade);
-  t.like(amt, { value: [{ description: 'trade' }] });
+  t.throws(() => zcfLtd.makeInvitation(_seat => {}, 'trade'), {
+    message: /Remotables must be explicitly declared/,
+  });
 });
 
 test('changed: makeZCFMint - watch', async t => {

@@ -11,7 +11,7 @@ import { M } from '@endo/patterns';
 export const ZcfForFlowsI = M.interface(
   'ZCF',
   {
-    makeInvitation: M.call(M.raw(), M.string())
+    makeInvitation: M.call(M.remotable('OfferHandler'), M.string())
       .optional(M.record(), M.pattern())
       .returns(VowShape),
   },
