@@ -54,13 +54,6 @@ export const prepareZcfForFlows = (zcf, zone, vowTools) => {
     atomicRearrange(transfers) {
       return zcf.atomicRearrange(transfers);
     },
-    /**
-     * @deprecated
-     * @type {ZCF['reallocate']}
-     */
-    reallocate(seat1, seat2, ...seatRest) {
-      return zcf.reallocate(seat1, seat2, ...seatRest);
-    },
     /** @type {ZCF['assertUniqueKeyword']} */
     assertUniqueKeyword(keyword) {
       return zcf.assertUniqueKeyword(keyword);

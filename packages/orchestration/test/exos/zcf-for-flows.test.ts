@@ -57,8 +57,6 @@ test('yes as is: atomicRearrange(), ... getTerms()', async t => {
   t.deepEqual(zcfLtd.getTerms(), zcf.getTerms());
 });
 
-test.todo('reallocate - yes as is');
-
 test('makeEmptySeatKit: remove userSeat', async t => {
   const { zcf, zcfLtd } = t.context;
 
@@ -175,6 +173,12 @@ test('no: saveIssuer(), ... getOfferFilter()', async t => {
 
   // @ts-expect-error
   t.throws(() => zcfLtd.setOfferFilter(['trade']), {
+    message: /not a function/,
+  });
+
+  const [seat1, seat2] = [Far('S1', {}), Far('S2', {})];
+  // @ts-expect-error
+  t.throws(() => zcfLtd.reallocate(seat1, seat2), {
     message: /not a function/,
   });
 
