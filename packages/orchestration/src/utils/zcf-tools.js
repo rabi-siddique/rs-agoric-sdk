@@ -9,18 +9,6 @@ import { VowShape } from '@agoric/vow';
 
 import { M } from '@endo/patterns';
 
-export const ZcfToolsI = M.interface(
-  'ZCF',
-  {
-    makeInvitation: M.call(M.remotable('OfferHandler'), M.string())
-      .optional(M.record(), M.pattern())
-      .returns(VowShape),
-  },
-  {
-    defaultGuards: 'passable',
-  },
-);
-
 /**
  * @param {ZCF} zcf
  * @param {VowTools} vowTools
