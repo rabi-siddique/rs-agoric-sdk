@@ -82,7 +82,7 @@ export const makeOrchestrationFacade = ({
       wrappedCtx,
       val =>
         val === zcf &&
-        assert.fail('do not use zcf in orchestration context; try zcfForFlows'),
+        assert.fail('do not use zcf in orchestration context; try zcfTools'),
     );
 
     // cast because return could be arbitrary subtype
