@@ -24,12 +24,12 @@ export type ZcfForFlows<CT = Record<string, unknown>> = Pick<
   ZCF<CT>,
   'atomicRearrange' | 'assertUniqueKeyword' | 'getTerms'
 > & {
-  makeZCFMint: <K_2 extends AssetKind = 'nat'>(
+  makeZCFMint: <K extends AssetKind = 'nat'>(
     keyword: Keyword,
-    assetKind?: K_2 | undefined,
+    assetKind?: K | undefined,
     displayInfo?: AdditionalDisplayInfo,
     options?: import('@agoric/ertp').IssuerOptionsRecord,
-  ) => Promise<ZCFMint<K_2>>;
+  ) => Promise<ZCFMint<K>>;
   makeEmptySeatKit: (exit?: ExitRule) => { zcfSeat: ZCFSeat };
   makeInvitation: <R, A = undefined>(
     offerHandler: OfferHandler<ERef<R>, A>,
