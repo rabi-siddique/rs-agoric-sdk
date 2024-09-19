@@ -29,16 +29,6 @@ export const ZcfToolsI = M.interface(
 export const prepareZcfTools = (zcf, zone, vowTools) => {
   /** @satisfies {HostInterface<ZcfTools>} */
   const zcfForFlows = zone.exo('ZcfForFlows', ZcfToolsI, {
-    /**
-     * Like {@link ZCF.makeEmptySeatKit}, but no userSeat is returned.
-     *
-     * @param {Parameters<ZCF['makeEmptySeatKit']>[0]} [exit]
-     */
-    makeEmptySeatKit(exit) {
-      const { zcfSeat } = zcf.makeEmptySeatKit(exit);
-      return harden({ zcfSeat });
-    },
-
     /** @type {HostOf<ZCF['makeInvitation']>} */
     makeInvitation(offerHandler, description, customDetails, proposalShape) {
       return vowTools.watch(
@@ -50,13 +40,6 @@ export const prepareZcfTools = (zcf, zone, vowTools) => {
         ),
       );
     },
-    /** @type {HostOf<ZCF['makeZCFMint']>} */
-    makeZCFMint(keyword, assetKind, displayInfo, options) {
-      return vowTools.watch(
-        zcf.makeZCFMint(keyword, assetKind, displayInfo, options),
-      );
-    },
-
     /** @type {ZCF['atomicRearrange']} */
     atomicRearrange(transfers) {
       zcf.atomicRearrange(transfers);
@@ -64,10 +47,6 @@ export const prepareZcfTools = (zcf, zone, vowTools) => {
     /** @type {ZCF['assertUniqueKeyword']} */
     assertUniqueKeyword(keyword) {
       zcf.assertUniqueKeyword(keyword);
-    },
-    /** @type {HostOf<ZCF['getTerms']>} */
-    getTerms() {
-      return zcf.getTerms();
     },
   });
 

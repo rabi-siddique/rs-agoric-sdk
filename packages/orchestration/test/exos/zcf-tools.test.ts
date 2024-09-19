@@ -46,25 +46,13 @@ const test = anyTest as TestFn<TestContext>;
 
 test.before('set up context', async t => (t.context = await makeTestContext()));
 
-test('unchanged: atomicRearrange(), ... getTerms()', async t => {
+test('unchanged: atomicRearrange(), assertUniqueKeyword()', async t => {
   const { zcf, zcfTools } = t.context;
 
   t.notThrows(() => zcfTools.atomicRearrange([]));
 
   t.notThrows(() => zcfTools.assertUniqueKeyword('K1'));
   t.throws(() => zcfTools.assertUniqueKeyword('Stuff'));
-
-  t.deepEqual(zcfTools.getTerms(), zcf.getTerms());
-});
-
-test('changed: makeEmptySeatKit: remove userSeat', async t => {
-  const { zcf, zcfTools } = t.context;
-
-  const kit = zcfTools.makeEmptySeatKit();
-  t.deepEqual(Object.keys(kit), ['zcfSeat']);
-
-  const { zcfSeat } = kit;
-  t.falsy(zcfSeat.hasExited(), 'zcfSeat works as usual');
 });
 
 test('changed: makeInvitation: watch promise', async t => {
@@ -84,24 +72,4 @@ test('removed: makeInvitation: non-passable handler', async t => {
   t.throws(() => zcfTools.makeInvitation(_seat => {}, 'trade'), {
     message: /Remotables must be explicitly declared/,
   });
-});
-
-test('changed: makeZCFMint - watch', async t => {
-  const { zcf, zcfTools, vt } = t.context;
-
-  const m1Vow = zcfTools.makeZCFMint('M1');
-  const m1 = await vt.when(m1Vow);
-
-  // m1 works like any other ZCF Mint
-  const kit = m1.getIssuerRecord();
-  t.deepEqual(Object.keys(kit), [
-    'brand',
-    'issuer',
-    'assetKind',
-    'displayInfo',
-  ]);
-  // @ts-expect-error something odd about HostInterface
-  const anAmount = AmountMath.make(kit.brand, 123n);
-  const aSeat = m1.mintGains({ Out: anAmount });
-  t.like(aSeat.getCurrentAllocation(), { Out: { value: 123n } });
 });

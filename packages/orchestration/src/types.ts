@@ -22,15 +22,8 @@ export type * from './vat-orchestration.js';
  */
 export type ZcfTools<CT = Record<string, unknown>> = Pick<
   ZCF<CT>,
-  'atomicRearrange' | 'assertUniqueKeyword' | 'getTerms'
+  'atomicRearrange' | 'assertUniqueKeyword'
 > & {
-  makeZCFMint: <K extends AssetKind = 'nat'>(
-    keyword: Keyword,
-    assetKind?: K | undefined,
-    displayInfo?: AdditionalDisplayInfo,
-    options?: import('@agoric/ertp').IssuerOptionsRecord,
-  ) => Promise<ZCFMint<K>>;
-  makeEmptySeatKit: (exit?: ExitRule) => { zcfSeat: ZCFSeat };
   makeInvitation: <R, A = undefined>(
     offerHandler: OfferHandler<ERef<R>, A>,
     description: string,
