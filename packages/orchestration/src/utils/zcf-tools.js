@@ -1,13 +1,12 @@
-import { VowShape } from '@agoric/vow';
-
 /**
  * @import {HostInterface, HostOf} from '@agoric/async-flow';
  * @import {VowTools} from '@agoric/vow';
- * @import {Zone} from '@agoric/zone';
  * @import {ZcfTools} from '../types.js';
  */
 
-import { M } from '@endo/patterns';
+import { M, mustMatch } from '@endo/patterns';
+
+const HandlerShape = M.remotable('OfferHandler');
 
 /**
  * @param {ZCF} zcf
@@ -18,6 +17,7 @@ export const makeZcfTools = (zcf, vowTools) => {
   const zcfForFlows = harden({
     /** @type {HostOf<ZCF['makeInvitation']>} */
     makeInvitation(offerHandler, description, customDetails, proposalShape) {
+      mustMatch(offerHandler, HandlerShape);
       return vowTools.watch(
         zcf.makeInvitation(
           offerHandler,

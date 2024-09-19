@@ -69,7 +69,8 @@ test('changed: makeInvitation: watch promise', async t => {
 test('removed: makeInvitation: non-passable handler', async t => {
   const { zcfTools } = t.context;
 
-  t.throws(() => zcfTools.makeInvitation(_seat => {}, 'trade'), {
+  const handler = harden(_seat => {});
+  t.throws(() => zcfTools.makeInvitation(handler, 'trade'), {
     message: /Remotables must be explicitly declared/,
   });
 });
