@@ -8,7 +8,7 @@ import { makeNodeBundleCache } from '@endo/bundle-source/cache.js';
 import { E, Far } from '@endo/far';
 import type { TestFn } from 'ava';
 import { createRequire } from 'node:module';
-import { prepareZcfTools } from '../../src/exos/zcf-tools.js';
+import { makeZcfTools } from '../../src/exos/zcf-tools.js';
 import { provideDurableZone } from '../supports.js';
 
 const nodeRequire = createRequire(import.meta.url);
@@ -36,7 +36,7 @@ const makeTestContext = async () => {
 
   const zone = provideDurableZone('root');
   const vt = prepareSwingsetVowTools(zone);
-  const zcfTools = prepareZcfTools(zcf, zone, vt);
+  const zcfTools = makeZcfTools(zcf, vt);
   return { zoe, zcf, stuff, feeMintAccess, zcfTools, vt };
 };
 

@@ -23,12 +23,11 @@ export const ZcfToolsI = M.interface(
 
 /**
  * @param {ZCF} zcf
- * @param {Zone} zone
  * @param {VowTools} vowTools
  */
-export const prepareZcfTools = (zcf, zone, vowTools) => {
+export const makeZcfTools = (zcf, vowTools) => {
   /** @satisfies {HostInterface<ZcfTools>} */
-  const zcfForFlows = zone.exo('ZcfTools', ZcfToolsI, {
+  const zcfForFlows = harden({
     /** @type {HostOf<ZCF['makeInvitation']>} */
     makeInvitation(offerHandler, description, customDetails, proposalShape) {
       return vowTools.watch(
