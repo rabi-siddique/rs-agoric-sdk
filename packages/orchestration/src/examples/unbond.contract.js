@@ -31,9 +31,9 @@ const contract = async (
   zcf,
   privateArgs,
   zone,
-  { orchestrateAll, zcfForFlows },
+  { orchestrateAll, zcfTools },
 ) => {
-  const { unbondAndLiquidStake } = orchestrateAll(flows, { zcfForFlows });
+  const { unbondAndLiquidStake } = orchestrateAll(flows, { zcfTools });
 
   const publicFacet = zone.exo('publicFacet', undefined, {
     makeUnbondAndLiquidStakeInvitation() {

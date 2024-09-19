@@ -1,7 +1,7 @@
 /** @file Rollup of all type definitions in the package, for local import and external export */
 
 import type { HostOf } from '@agoric/async-flow';
-import { prepareZcfForFlows } from './exos/zcf-tools.js';
+import { prepareZcfTools } from './exos/zcf-tools.js';
 
 export type * from './chain-info.js';
 export type * from './cosmos-api.js';
@@ -16,11 +16,11 @@ export type * from './exos/chain-hub.js';
 export type * from './vat-orchestration.js';
 
 /**
- * Partial Zoe Contract Facet ({@link ZCF}) for use in {@link OrchestrationFlow}s.
+ * ({@link ZCF})-like tools for use in {@link OrchestrationFlow}s.
  *
  * @interface
  */
-export type ZcfForFlows<CT = Record<string, unknown>> = Pick<
+export type ZcfTools<CT = Record<string, unknown>> = Pick<
   ZCF<CT>,
   'atomicRearrange' | 'assertUniqueKeyword' | 'getTerms'
 > & {

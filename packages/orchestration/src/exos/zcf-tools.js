@@ -4,12 +4,12 @@ import { VowShape } from '@agoric/vow';
  * @import {HostInterface, HostOf} from '@agoric/async-flow';
  * @import {VowTools} from '@agoric/vow';
  * @import {Zone} from '@agoric/zone';
- * @import {ZcfForFlows} from '../types.js';
+ * @import {ZcfTools} from '../types.js';
  */
 
 import { M } from '@endo/patterns';
 
-export const ZcfForFlowsI = M.interface(
+export const ZcfToolsI = M.interface(
   'ZCF',
   {
     makeInvitation: M.call(M.remotable('OfferHandler'), M.string())
@@ -26,9 +26,9 @@ export const ZcfForFlowsI = M.interface(
  * @param {Zone} zone
  * @param {VowTools} vowTools
  */
-export const prepareZcfForFlows = (zcf, zone, vowTools) => {
-  /** @satisfies {HostInterface<ZcfForFlows>} */
-  const zcfForFlows = zone.exo('ZcfForFlows', ZcfForFlowsI, {
+export const prepareZcfTools = (zcf, zone, vowTools) => {
+  /** @satisfies {HostInterface<ZcfTools>} */
+  const zcfForFlows = zone.exo('ZcfForFlows', ZcfToolsI, {
     /**
      * Like {@link ZCF.makeEmptySeatKit}, but no userSeat is returned.
      *

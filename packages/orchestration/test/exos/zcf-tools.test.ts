@@ -8,7 +8,7 @@ import { makeNodeBundleCache } from '@endo/bundle-source/cache.js';
 import { E, Far } from '@endo/far';
 import type { TestFn } from 'ava';
 import { createRequire } from 'node:module';
-import { prepareZcfForFlows } from '../../src/exos/zcf-tools.js';
+import { prepareZcfTools } from '../../src/exos/zcf-tools.js';
 import { provideDurableZone } from '../supports.js';
 
 const nodeRequire = createRequire(import.meta.url);
@@ -36,8 +36,8 @@ const makeTestContext = async () => {
 
   const zone = provideDurableZone('root');
   const vt = prepareSwingsetVowTools(zone);
-  const zcfLtd = prepareZcfForFlows(zcf, zone, vt);
-  return { zoe, zcf, stuff, feeMintAccess, zcfLtd, vt };
+  const zcfTools = prepareZcfTools(zcf, zone, vt);
+  return { zoe, zcf, stuff, feeMintAccess, zcfTools, vt };
 };
 
 type TestContext = Awaited<ReturnType<typeof makeTestContext>>;
@@ -47,20 +47,20 @@ const test = anyTest as TestFn<TestContext>;
 test.before('set up context', async t => (t.context = await makeTestContext()));
 
 test('unchanged: atomicRearrange(), ... getTerms()', async t => {
-  const { zcf, zcfLtd } = t.context;
+  const { zcf, zcfTools } = t.context;
 
-  t.notThrows(() => zcfLtd.atomicRearrange([]));
+  t.notThrows(() => zcfTools.atomicRearrange([]));
 
-  t.notThrows(() => zcfLtd.assertUniqueKeyword('K1'));
-  t.throws(() => zcfLtd.assertUniqueKeyword('Stuff'));
+  t.notThrows(() => zcfTools.assertUniqueKeyword('K1'));
+  t.throws(() => zcfTools.assertUniqueKeyword('Stuff'));
 
-  t.deepEqual(zcfLtd.getTerms(), zcf.getTerms());
+  t.deepEqual(zcfTools.getTerms(), zcf.getTerms());
 });
 
 test('changed: makeEmptySeatKit: remove userSeat', async t => {
-  const { zcf, zcfLtd } = t.context;
+  const { zcf, zcfTools } = t.context;
 
-  const kit = zcfLtd.makeEmptySeatKit();
+  const kit = zcfTools.makeEmptySeatKit();
   t.deepEqual(Object.keys(kit), ['zcfSeat']);
 
   const { zcfSeat } = kit;
@@ -68,10 +68,10 @@ test('changed: makeEmptySeatKit: remove userSeat', async t => {
 });
 
 test('changed: makeInvitation: watch promise', async t => {
-  const { zoe, zcf, zcfLtd, vt } = t.context;
+  const { zoe, zcf, zcfTools, vt } = t.context;
 
   const handler = Far('Trade', { handle: seat => {} });
-  const toTradeVow = zcfLtd.makeInvitation(handler, 'trade');
+  const toTradeVow = zcfTools.makeInvitation(handler, 'trade');
 
   const toTrade = await vt.when(toTradeVow);
   const amt = await E(E(zoe).getInvitationIssuer()).getAmountOf(toTrade);
@@ -79,17 +79,17 @@ test('changed: makeInvitation: watch promise', async t => {
 });
 
 test('removed: makeInvitation: non-passable handler', async t => {
-  const { zcfLtd } = t.context;
+  const { zcfTools } = t.context;
 
-  t.throws(() => zcfLtd.makeInvitation(_seat => {}, 'trade'), {
+  t.throws(() => zcfTools.makeInvitation(_seat => {}, 'trade'), {
     message: /Remotables must be explicitly declared/,
   });
 });
 
 test('changed: makeZCFMint - watch', async t => {
-  const { zcf, zcfLtd, vt } = t.context;
+  const { zcf, zcfTools, vt } = t.context;
 
-  const m1Vow = zcfLtd.makeZCFMint('M1');
+  const m1Vow = zcfTools.makeZCFMint('M1');
   const m1 = await vt.when(m1Vow);
 
   // m1 works like any other ZCF Mint
@@ -107,81 +107,81 @@ test('changed: makeZCFMint - watch', async t => {
 });
 
 test('removed: saveIssuer(), ... getOfferFilter()', async t => {
-  const { zcfLtd, stuff, feeMintAccess } = t.context;
+  const { zcfTools, stuff, feeMintAccess } = t.context;
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.saveIssuer('T2', stuff.issuer), {
+  t.throws(() => zcfTools.saveIssuer('T2', stuff.issuer), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.shutdown('done'), {
+  t.throws(() => zcfTools.shutdown('done'), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.shutdownWithFailure(Error('oops')), {
+  t.throws(() => zcfTools.shutdownWithFailure(Error('oops')), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.stopAcceptingOffers(), {
+  t.throws(() => zcfTools.stopAcceptingOffers(), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.registerFeeMint('Fee', feeMintAccess), {
+  t.throws(() => zcfTools.registerFeeMint('Fee', feeMintAccess), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.getZoeService(), {
+  t.throws(() => zcfTools.getZoeService(), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.getInvitationIssuer(), {
+  t.throws(() => zcfTools.getInvitationIssuer(), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.getBrandForIssuer(stuff.issuer), {
+  t.throws(() => zcfTools.getBrandForIssuer(stuff.issuer), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.getIssuerForBrand(stuff.brand), {
+  t.throws(() => zcfTools.getIssuerForBrand(stuff.brand), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.getAssetKind(stuff.brand), {
+  t.throws(() => zcfTools.getAssetKind(stuff.brand), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.setTestJig(() => ({})), {
+  t.throws(() => zcfTools.setTestJig(() => ({})), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.getInstance(), {
+  t.throws(() => zcfTools.getInstance(), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  t.throws(() => zcfLtd.setOfferFilter(['trade']), {
+  t.throws(() => zcfTools.setOfferFilter(['trade']), {
     message: /not a function/,
   });
 
   const [seat1, seat2] = [Far('S1', {}), Far('S2', {})];
   // @ts-expect-error
-  t.throws(() => zcfLtd.reallocate(seat1, seat2), {
+  t.throws(() => zcfTools.reallocate(seat1, seat2), {
     message: /not a function/,
   });
 
   // @ts-expect-error
-  await t.throwsAsync(async () => zcfLtd.getOfferFilter(), {
+  await t.throwsAsync(async () => zcfTools.getOfferFilter(), {
     message: /not a function/,
   });
 });
