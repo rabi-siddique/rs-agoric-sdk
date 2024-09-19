@@ -10,7 +10,7 @@ import { prepareOrchestrator } from '../exos/orchestrator.js';
 import { prepareRemoteChainFacade } from '../exos/remote-chain-facade.js';
 import { makeOrchestrationFacade } from '../facade.js';
 import { makeZoeTools } from './zoe-tools.js';
-import { prepareZcfForFlows } from '../exos/zcf-for-flow.js';
+import { prepareZcfForFlows } from '../exos/zcf-tools.js';
 
 /**
  * @import {LocalChain} from '@agoric/vats/src/localchain.js';

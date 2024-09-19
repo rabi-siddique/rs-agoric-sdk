@@ -8,7 +8,7 @@ import { makeNodeBundleCache } from '@endo/bundle-source/cache.js';
 import { E, Far } from '@endo/far';
 import type { TestFn } from 'ava';
 import { createRequire } from 'node:module';
-import { prepareZcfForFlows } from '../../src/exos/zcf-for-flow.js';
+import { prepareZcfForFlows } from '../../src/exos/zcf-tools.js';
 import { provideDurableZone } from '../supports.js';
 
 const nodeRequire = createRequire(import.meta.url);

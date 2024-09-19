@@ -1,7 +1,7 @@
 /** @file Rollup of all type definitions in the package, for local import and external export */
 
 import type { HostOf } from '@agoric/async-flow';
-import { prepareZcfForFlows } from './exos/zcf-for-flow.js';
+import { prepareZcfForFlows } from './exos/zcf-tools.js';
 
 export type * from './chain-info.js';
 export type * from './cosmos-api.js';
