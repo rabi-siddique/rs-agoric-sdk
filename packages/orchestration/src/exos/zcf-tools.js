@@ -28,7 +28,7 @@ export const ZcfToolsI = M.interface(
  */
 export const prepareZcfTools = (zcf, zone, vowTools) => {
   /** @satisfies {HostInterface<ZcfTools>} */
-  const zcfForFlows = zone.exo('ZcfForFlows', ZcfToolsI, {
+  const zcfForFlows = zone.exo('ZcfTools', ZcfToolsI, {
     /** @type {HostOf<ZCF['makeInvitation']>} */
     makeInvitation(offerHandler, description, customDetails, proposalShape) {
       return vowTools.watch(
