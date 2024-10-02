@@ -280,6 +280,13 @@ export async function buildSwingset(
  */
 
 /**
+ * Return a stateful run policy that supports two phases: first allow
+ * non-cleanup work (presumably deliveries) until an overrideable computron
+ * budget is exhausted, then (iff no work was done and at least one vat cleanup
+ * budget field is positive) a cleanup phase that allows cleanup work (and
+ * presumably nothing else) until one of those fields is exhausted.
+ * https://github.com/Agoric/agoric-sdk/issues/8928#issuecomment-2053357870
+ *
  * @param {object} params
  * @param {BeansPerUnit} params.beansPerUnit
  * @param {import('@agoric/swingset-vat').CleanupBudget} [params.vatCleanupBudget]
@@ -300,24 +307,24 @@ function computronCounter(
   assert.typeof(xsnapComputron, 'bigint');
 
   let totalBeans = 0n;
-  const { default: defaultCleanupBudget = 0, ...remainingCleanups } = {
-    ...vatCleanupBudget,
-  };
+  const shouldRun = () => ignoreBlockLimit || totalBeans < blockComputeLimit;
+
+  const remainingCleanups = { default: Infinity, ...vatCleanupBudget };
+  const defaultCleanupBudget = remainingCleanups.default;
   let cleanupStarted = false;
-  // Cleanup starts off "done" unless at least one budget field is positive.
-  let cleanupDone = !Object.values(remainingCleanups).some(n => n > 0);
-  // We currently implement a strict separation: first a phase in which
-  // deliveries are allowed but cleanup is not, then (iff no work was done in
-  // the first) a phase in which cleanup is allowed but deliveries are not.
-  // https://github.com/Agoric/agoric-sdk/issues/8928#issuecomment-2053357870
-  const shouldRun = () =>
-    !cleanupStarted && (ignoreBlockLimit || totalBeans < blockComputeLimit);
-  const allowCleanup = () => cleanupStarted && !cleanupDone;
+  let cleanupDone = false;
+  const cleanupPossible =
+    Object.values(remainingCleanups).length > 0
+      ? Object.values(remainingCleanups).some(n => n > 0)
+      : defaultCleanupBudget > 0;
+  if (!cleanupPossible) cleanupDone = true;
+  /** @type {() => (false | import('@agoric/swingset-vat').CleanupBudget)} */
+  const allowCleanup = () =>
+    cleanupStarted && !cleanupDone && { ...remainingCleanups };
   const startCleanup = () => {
     assert(!cleanupStarted);
     cleanupStarted = true;
-    if (totalBeans > 0n) cleanupDone = true;
-    return allowCleanup();
+    return totalBeans === 0n && !cleanupDone;
   };
   const didCleanup = details => {
     for (const [phase, count] of Object.entries(details)) {
@@ -329,7 +336,7 @@ function computronCounter(
       remainingCleanups[phase] -= count;
       if (remainingCleanups[phase] <= 0) cleanupDone = true;
     }
-    return allowCleanup();
+    return !cleanupDone && shouldRun();
   };
 
   const policy = harden({
