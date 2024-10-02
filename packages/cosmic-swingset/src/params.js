@@ -92,7 +92,7 @@ export const parseParams = params => {
     Fail`vatCleanupBudget must be an array, not ${rawVatCleanupBudget}`;
   const vatCleanupBudget = recordFromEntries(
     rawVatCleanupBudget.map(({ key, value }) => [key, value]),
-    stringToNat,
+    s => Number(stringToNat(s)),
   );
   vatCleanupBudget.default !== undefined ||
     Fail`vatCleanupBudget.default must be provided`;
