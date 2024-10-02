@@ -94,8 +94,9 @@ export const parseParams = params => {
     rawVatCleanupBudget.map(({ key, value }) => [key, value]),
     s => Number(stringToNat(s)),
   );
-  vatCleanupBudget.default !== undefined ||
-    Fail`vatCleanupBudget.default must be provided`;
+  rawVatCleanupBudget.length === 0 ||
+    vatCleanupBudget.default !== undefined ||
+    Fail`vatCleanupBudget.default must be provided when vatCleanupBudget is not empty`;
 
   return { beansPerUnit, feeUnitPrice, queueMax, vatCleanupBudget };
 };
