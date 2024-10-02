@@ -131,12 +131,12 @@ func TestUpdateParamsFromExisting(t *testing.T) {
 		VatCleanupBudget:   []UintMapEntry{customVatCleanup, UintMapEntry{VatCleanupDefault, sdk.NewUint(10)}},
 	}
 	want := Params{
-		BeansPerUnit:       append(append(in.BeansPerUnit, defaultBeansPerUnit[0:2]...), defaultBeansPerUnit[4:len(defaultBeansPerUnit)]...),
+		BeansPerUnit:       append(append(in.BeansPerUnit, defaultBeansPerUnit[0:2]...), defaultBeansPerUnit[4:]...),
 		BootstrapVatConfig: in.BootstrapVatConfig,
 		FeeUnitPrice:       in.FeeUnitPrice,
 		PowerFlagFees:      append(in.PowerFlagFees, DefaultPowerFlagFees...),
 		QueueMax:           in.QueueMax,
-		VatCleanupBudget:   append(in.VatCleanupBudget, DefaultVatCleanupBudget[1:len(DefaultVatCleanupBudget)]...),
+		VatCleanupBudget:   append(in.VatCleanupBudget, DefaultVatCleanupBudget[1:]...),
 	}
 	got, err := UpdateParams(in)
 	if err != nil {

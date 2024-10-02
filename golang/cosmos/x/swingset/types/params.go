@@ -223,7 +223,6 @@ func appendMissingDefaults[Entry StringBeans | PowerFlagFee | QueueSize | UintMa
 			return e.Key
 		}
 		panic("unreachable")
-		return ""
 	}
 
 	existingKeys := make(map[string]bool, len(entries))
