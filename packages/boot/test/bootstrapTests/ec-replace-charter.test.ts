@@ -23,7 +23,11 @@ const wallets = [
   'agoric1zayxg4e9vd0es9c9jlpt36qtth255txjp6a8yc',
 ];
 
-const highPrioritySenderKey = 'highPrioritySenders';
+const managerGovernanceKey =
+  'published.vaultFactory.managers.manager0.governance';
+const auctioneerParamsKey = 'published.auction.governance';
+const provisionPoolParamsKey = 'published.provisionPool.governance';
+const getPsmKey = brand => `published.psm.IST.${brand}.governance`;
 
 const offerIds = {
   propose: { outgoing: 'outgoing_propose', incoming: 'incoming_propose' },
@@ -63,14 +67,9 @@ export const makeZoeTestContext = async t => {
 
   const { fromCapData } = makeMarshal(undefined, slotToBoardRemote);
 
-  const getUpdatedDebtLimit = () => {
-    const atomGovernance = unmarshalFromVstorage(
-      storage.data,
-      'published.vaultFactory.managers.manager0.governance',
-      fromCapData,
-      -1,
-    );
-    return atomGovernance.current.DebtLimit.value.value;
+  const getVstorageData = key => {
+    const data = unmarshalFromVstorage(storage.data, key, fromCapData, -1);
+    return data;
   };
 
   const governanceDriver = await makeGovernanceDriver(
@@ -83,7 +82,7 @@ export const makeZoeTestContext = async t => {
   return {
     ...swingsetTestKit,
     storage,
-    getUpdatedDebtLimit,
+    getVstorageData,
     governanceDriver,
   };
 };
@@ -94,7 +93,7 @@ test.before(async t => {
 });
 
 test.serial('normal running of committee', async t => {
-  const { advanceTimeBy, storage, getUpdatedDebtLimit, governanceDriver } =
+  const { advanceTimeBy, storage, getVstorageData, governanceDriver } =
     t.context;
 
   const agoricNamesRemotes = makeAgoricNamesRemotesFromFakeStorage(storage);
@@ -145,8 +144,8 @@ test.serial('normal running of committee', async t => {
   t.log('Verifying outcome');
 
   const lastOutcome = await governanceDriver.getLatestOutcome();
-  console.log(lastOutcome);
-  t.deepEqual(getUpdatedDebtLimit(), 100_000_000n);
+  const managerParams = getVstorageData(managerGovernanceKey);
+  t.deepEqual(managerParams.current.DebtLimit.value.value, 100_000_000n);
   t.assert(lastOutcome.outcome === 'win');
 });
 
@@ -163,7 +162,7 @@ test.serial('replace committee', async t => {
 });
 
 test.serial('successful proposal and vote by continuing members', async t => {
-  const { storage, advanceTimeBy, getUpdatedDebtLimit, governanceDriver } =
+  const { storage, advanceTimeBy, getVstorageData, governanceDriver } =
     t.context;
   const newCommittee = governanceDriver.ecMembers.slice(0, 3);
 
@@ -216,13 +215,14 @@ test.serial('successful proposal and vote by continuing members', async t => {
 
   t.log('Verifying outcome');
   const lastOutcome = await governanceDriver.getLatestOutcome();
-  t.deepEqual(getUpdatedDebtLimit(), 200_000_000n);
+  const managerParams = getVstorageData(managerGovernanceKey);
+  t.deepEqual(managerParams.current.DebtLimit.value.value, 200_000_000n);
   t.assert(lastOutcome.outcome === 'win');
 });
 
 test.serial('successful proposal by outgoing member', async t => {
   // Ability to propose by outgoing member should still exist
-  const { storage, advanceTimeBy, getUpdatedDebtLimit, governanceDriver } =
+  const { storage, advanceTimeBy, getVstorageData, governanceDriver } =
     t.context;
   const newCommittee = governanceDriver.ecMembers.slice(0, 3);
   const outgoingMember = governanceDriver.ecMembers[3];
@@ -262,6 +262,158 @@ test.serial('successful proposal by outgoing member', async t => {
 
   t.log('Verifying outcome');
   const lastOutcome = await governanceDriver.getLatestOutcome();
-  t.deepEqual(getUpdatedDebtLimit(), 300_000_000n);
+  const managerParams = getVstorageData(managerGovernanceKey);
+  t.deepEqual(managerParams.current.DebtLimit.value.value, 300_000_000n);
   t.assert(lastOutcome.outcome === 'win');
 });
+
+test.serial('successful proposal and vote for auctioneer', async t => {
+  const { storage, advanceTimeBy, getVstorageData, governanceDriver } =
+    t.context;
+  const newCommittee = governanceDriver.ecMembers.slice(0, 3);
+
+  const agoricNamesRemotes = makeAgoricNamesRemotesFromFakeStorage(storage);
+  const { auctioneer } = agoricNamesRemotes.instance;
+
+  t.log('Proposing question using new charter invitation');
+  await governanceDriver.proposeParams(
+    auctioneer,
+    { LowestRate: 100_000_000n },
+    { paramPath: { key: 'governedParams' } },
+    newCommittee[0],
+    getQuestionId(4),
+    offerIds.propose.incoming,
+  );
+
+  t.like(newCommittee[0].getLatestUpdateRecord(), {
+    status: { id: getQuestionId(4), numWantsSatisfied: 1 },
+  });
+
+  t.log('Voting on question using first 2 wallets');
+  await governanceDriver.enactLatestProposal(
+    newCommittee.slice(0, 2),
+    getVoteId(4),
+    offerIds.vote.incoming,
+  );
+  for (const w of newCommittee.slice(0, 2)) {
+    t.like(w.getLatestUpdateRecord(), {
+      status: { id: getVoteId(4), numWantsSatisfied: 1 },
+    });
+  }
+
+  t.log('Waiting for period to end');
+  await advanceTimeBy(1, 'minutes');
+
+  t.log('Verifying outcome');
+  const lastOutcome = await governanceDriver.getLatestOutcome();
+  const auctioneerParams = getVstorageData(auctioneerParamsKey);
+  t.deepEqual(auctioneerParams.current.LowestRate.value, 100_000_000n);
+  t.assert(lastOutcome.outcome === 'win');
+});
+
+test.serial('successful proposal and vote for provisionPool', async t => {
+  const { storage, advanceTimeBy, getVstorageData, governanceDriver } =
+    t.context;
+  const newCommittee = governanceDriver.ecMembers.slice(0, 3);
+
+  const agoricNamesRemotes = makeAgoricNamesRemotesFromFakeStorage(storage);
+  const { provisionPool } = agoricNamesRemotes.instance;
+  const { IST } = agoricNamesRemotes.brand;
+
+  t.log('Proposing question using new charter invitation');
+  await governanceDriver.proposeParams(
+    provisionPool,
+    { PerAccountInitialAmount: { brand: IST, value: 100_000_000n } },
+    { paramPath: { key: 'governedParams' } },
+    newCommittee[0],
+    getQuestionId(5),
+    offerIds.propose.incoming,
+  );
+
+  t.like(newCommittee[0].getLatestUpdateRecord(), {
+    status: { id: getQuestionId(5), numWantsSatisfied: 1 },
+  });
+
+  t.log('Voting on question using first 2 wallets');
+  await governanceDriver.enactLatestProposal(
+    newCommittee.slice(0, 2),
+    getVoteId(5),
+    offerIds.vote.incoming,
+  );
+  for (const w of newCommittee.slice(0, 2)) {
+    t.like(w.getLatestUpdateRecord(), {
+      status: { id: getVoteId(5), numWantsSatisfied: 1 },
+    });
+  }
+
+  t.log('Waiting for period to end');
+  await advanceTimeBy(1, 'minutes');
+
+  t.log('Verifying outcome');
+  const lastOutcome = await governanceDriver.getLatestOutcome();
+  const provisionPoolParams = getVstorageData(provisionPoolParamsKey);
+  t.deepEqual(
+    provisionPoolParams.current.PerAccountInitialAmount.value.value,
+    100_000_000n,
+  );
+  t.assert(lastOutcome.outcome === 'win');
+});
+
+test.serial('successful proposal and vote for psm', async t => {
+  const { storage, advanceTimeBy, getVstorageData, governanceDriver } =
+    t.context;
+  const newCommittee = governanceDriver.ecMembers.slice(0, 3);
+
+  const agoricNamesRemotes = makeAgoricNamesRemotesFromFakeStorage(storage);
+  const { IST } = agoricNamesRemotes.brand;
+
+  const psmInstances = Object.keys(agoricNamesRemotes.instance)
+    .map(instance => {
+      const regex = /^psm-IST-(?<brand>.*)$/;
+      return regex.exec(instance);
+    })
+    .filter(instance => instance !== null);
+
+  for (const instance of psmInstances) {
+    const brand = instance.groups?.brand;
+    const instanceName = instance[0];
+    t.log('Proposing question using new charter invitation for', instanceName);
+    await governanceDriver.proposeParams(
+      agoricNamesRemotes.instance[instanceName],
+      { MintLimit: { brand: IST, value: 100_000_000n } },
+      { paramPath: { key: 'governedParams' } },
+      newCommittee[0],
+      getQuestionId(instanceName),
+      offerIds.propose.incoming,
+    );
+
+    t.like(newCommittee[0].getLatestUpdateRecord(), {
+      status: { id: getQuestionId(instanceName), numWantsSatisfied: 1 },
+    });
+
+    t.log('Voting on question using first 2 wallets');
+    await governanceDriver.enactLatestProposal(
+      newCommittee.slice(0, 2),
+      getVoteId(instanceName),
+      offerIds.vote.incoming,
+    );
+    for (const w of newCommittee.slice(0, 2)) {
+      t.like(w.getLatestUpdateRecord(), {
+        status: { id: getVoteId(instanceName), numWantsSatisfied: 1 },
+      });
+    }
+
+    t.log('Waiting for period to end');
+    await advanceTimeBy(1, 'minutes');
+
+    t.log('Verifying outcome');
+    const lastOutcome = await governanceDriver.getLatestOutcome();
+    const psmParams = getVstorageData(getPsmKey(brand));
+    t.deepEqual(psmParams.current.MintLimit.value.value, 100_000_000n);
+    t.assert(lastOutcome.outcome === 'win');
+  }
+});
+
+test.todo(
+  'successful proposal and vote for price feed (add when there are governed params for this)',
+);
