@@ -53,13 +53,8 @@ const handlehighPrioritySendersList = async (
   const HIGH_PRIORITY_SENDERS_NAMESPACE = 'economicCommittee';
   const highPrioritySendersManager = await highPrioritySendersManagerP;
 
-  assert(
-    highPrioritySendersManager,
-    `highPriority SendersManager is not defined`,
-  );
-
   if (!highPrioritySendersManager) {
-    Fail`highPrioritySendersManager is not defined`;
+    throw Fail`highPrioritySendersManager is not defined`;
   }
 
   const { addressesToAdd, addressesToRemove } = highPrioritySendersConfig;
