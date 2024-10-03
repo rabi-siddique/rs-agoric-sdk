@@ -1,6 +1,5 @@
 // @ts-check
 import { E } from '@endo/eventual-send';
-import { Fail } from '@endo/errors';
 import {
   assertPathSegment,
   makeStorageNodeChild,
@@ -54,7 +53,7 @@ const handlehighPrioritySendersList = async (
   const highPrioritySendersManager = await highPrioritySendersManagerP;
 
   if (!highPrioritySendersManager) {
-    throw Fail`highPrioritySendersManager is not defined`;
+    throw assert.error(`highPrioritySendersManager is not defined`);
   }
 
   const { addressesToAdd, addressesToRemove } = highPrioritySendersConfig;
