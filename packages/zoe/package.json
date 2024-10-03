@@ -16,7 +16,7 @@
     "test:c8": "c8 $C8_OPTIONS ava --config=ava-nesm.config.js",
     "test:unit": "ava 'test/unitTests' -T 1m --verbose",
     "test:swingset": "ava 'test/swingsetTests' -T 10m --verbose",
-    "test:xs": "yarn test:xs-unit",
+    "test:xs": "yarn test:xs-unit && yarn test:xs-worker",
     "test:xs-unit": "ava-xs --verbose",
     "test:xs-worker": "SWINGSET_WORKER_TYPE=xs-worker ava -c 2 'test/swingsetTests'",
     "build-zcfBundle": "yarn build:bundles",
