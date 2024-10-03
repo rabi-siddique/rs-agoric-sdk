@@ -336,7 +336,9 @@ function computronCounter(
       remainingCleanups[phase] -= count;
       if (remainingCleanups[phase] <= 0) cleanupDone = true;
     }
-    return !cleanupDone && shouldRun();
+    // We return true to allow processing of any BOYD/GC prompted by cleanup,
+    // even if cleanup as such is now done.
+    return true;
   };
 
   const policy = harden({
