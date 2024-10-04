@@ -281,6 +281,17 @@ export const makeGovernanceDriver = async (
         proposal: {},
       });
     },
+    getOracleInvitation: async () => {
+      const purse = w
+        .getCurrentWalletRecord()
+        // TODO: manage brands by object identity #10167
+        .purses.find(p => p.brand.toString().includes('Invitation'));
+      // @ts-expect-error
+      const invitation = purse?.balance.value.find(
+        v => v.description === 'oracle invitation',
+      );
+      return invitation;
+    },
   }));
 
   const ensureInvitationsAccepted = async () => {
@@ -322,6 +333,28 @@ export const makeGovernanceDriver = async (
     });
   };
 
+  const proposeApiCall = async (
+    instance,
+    methodName: string,
+    methodArgs: any[],
+    ecMember: (typeof ecMembers)[0] | null = null,
+    questionId = 'propose',
+    charterOfferId = charterMembershipId,
+  ) => {
+    const now = await EV(chainTimerService).getCurrentTimestamp();
+    const deadline = SECONDS_PER_MINUTE + now.absValue;
+    await (ecMember || ecMembers[0]).executeOffer({
+      id: questionId,
+      invitationSpec: {
+        invitationMakerName: 'VoteOnApiCall',
+        previousOffer: charterOfferId,
+        source: 'continuing',
+        invitationArgs: [instance, methodName, methodArgs, deadline],
+      },
+      proposal: {},
+    });
+  };
+
   const enactLatestProposal = async (
     members = ecMembers,
     voteId = 'voteInNewLimit',
@@ -344,6 +377,7 @@ export const makeGovernanceDriver = async (
 
   return {
     proposeParams,
+    proposeApiCall,
     enactLatestProposal,
     getLatestOutcome,
     async changeParams(instance: Instance, params: Object, path?: object) {

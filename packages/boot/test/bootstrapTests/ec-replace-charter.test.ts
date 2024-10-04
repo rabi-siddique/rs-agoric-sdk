@@ -414,6 +414,60 @@ test.serial('successful proposal and vote for psm', async t => {
   }
 });
 
-test.todo(
-  'successful proposal and vote for price feed (add when there are governed params for this)',
-);
+test.serial('successful proposal and vote for price feed', async t => {
+  const { storage, advanceTimeBy, governanceDriver } = t.context;
+  const newCommittee = governanceDriver.ecMembers.slice(0, 3);
+
+  const agoricNamesRemotes = makeAgoricNamesRemotesFromFakeStorage(storage);
+
+  const priceFeedInstances = Object.keys(agoricNamesRemotes.instance).filter(
+    instance => {
+      const regex = /^(.*)-(.*) price feed$/;
+      return regex.exec(instance);
+    },
+  );
+
+  for (const instanceName of priceFeedInstances) {
+    t.log('Proposing question using new charter invitation for', instanceName);
+    await governanceDriver.proposeApiCall(
+      agoricNamesRemotes.instance[instanceName],
+      'addOracles',
+      [[wallets[0]]],
+      newCommittee[0],
+      getQuestionId(instanceName),
+      offerIds.propose.incoming,
+    );
+
+    t.like(newCommittee[0].getLatestUpdateRecord(), {
+      status: { id: getQuestionId(instanceName), numWantsSatisfied: 1 },
+    });
+
+    t.log('Voting on question using first 2 wallets');
+    await governanceDriver.enactLatestProposal(
+      newCommittee.slice(0, 2),
+      getVoteId(instanceName),
+      offerIds.vote.incoming,
+    );
+    for (const w of newCommittee.slice(0, 2)) {
+      t.like(w.getLatestUpdateRecord(), {
+        status: { id: getVoteId(instanceName), numWantsSatisfied: 1 },
+      });
+    }
+
+    t.log('no oracle invitation should exist before vote passing');
+    const oracleInvitation =
+      await governanceDriver.ecMembers[0].getOracleInvitation();
+    t.is(oracleInvitation, undefined);
+
+    t.log('Waiting for period to end');
+    await advanceTimeBy(1, 'minutes');
+
+    t.log('Verifying outcome');
+    const lastOutcome = await governanceDriver.getLatestOutcome();
+    t.assert(lastOutcome.outcome === 'win');
+
+    const oracleInvitationAfterProposal =
+      await governanceDriver.ecMembers[0].getOracleInvitation();
+    t.not(oracleInvitationAfterProposal, undefined);
+  }
+});
