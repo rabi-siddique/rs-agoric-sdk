@@ -322,7 +322,7 @@ const addGovernorsToEconCharter = async (
   const psmKitMap = await psmKit;
 
   for (const { psm, psmGovernorCreatorFacet, label } of psmKitMap.values()) {
-    E(ecCreatorFacet).addInstance(psm, psmGovernorCreatorFacet, label);
+    await E(ecCreatorFacet).addInstance(psm, psmGovernorCreatorFacet, label);
   }
 
   const governedContractKitMap = await governedContractKits;
@@ -332,7 +332,7 @@ const addGovernorsToEconCharter = async (
     governorCreatorFacet,
     label,
   } of governedContractKitMap.values()) {
-    E(ecCreatorFacet).addInstance(instance, governorCreatorFacet, label);
+    await E(ecCreatorFacet).addInstance(instance, governorCreatorFacet, label);
   }
 };
 
