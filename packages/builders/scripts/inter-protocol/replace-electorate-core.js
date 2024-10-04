@@ -58,7 +58,7 @@ const configurations = {
     },
     highPrioritySendersConfig: {
       addressesToAdd: [],
-      addressesToRemove: [],
+      addressesToRemove: ['agoric1wrfh296eu2z34p6pah7q04jjuyj3mxu9v98277'],
     },
   },
   BOOTSTRAP_TEST: {
