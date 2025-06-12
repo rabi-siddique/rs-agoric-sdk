@@ -1,0 +1,7 @@
+{
+  "body": "#{\"method\":\"executeOffer\",\"offer\":{\"id\":\"offer-1765436039143\",\"invitationSpec\":{\"instance\":\"$0.Alleged: BoardRemoteInstanceHandle\",\"invitationArgs\":[\"sendGmp\",[{\"contractInvocationData\":[],\"destinationAddress\":\"0x2B3545638859C49df84660eA2D110f82F2e80De8\",\"destinationEVMChain\":\"Avalanche\",\"gasAmount\":15000000,\"type\":1}]],\"invitationMakerName\":\"makeEVMTransactionInvitation\",\"previousOffer\":\"offer-1765434629993\",\"source\":\"continuing\"},\"offerArgs\":{},\"proposal\":{\"give\":{\"BLD\":{\"brand\":\"$1.Alleged: BoardRemoteBLD brand\",\"value\":\"+15000000\"}}}}}",
+  "slots": [
+    "board025602",
+    "board0566"
+  ]
+}
