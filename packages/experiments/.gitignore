@@ -1,0 +1,10 @@
+node_modules
+dist
+
+.yarn
+.pnp.cjs
+.pnp.loader.mjs
+
+startContract-permit.json
+startContract-plan.json
+startContract.js
