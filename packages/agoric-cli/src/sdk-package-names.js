@@ -59,5 +59,6 @@ export default [
   "@agoric/xsnap-lockdown",
   "@agoric/zoe",
   "@agoric/zone",
-  "agoric"
+  "agoric",
+  "agoric-contract-experiments"
 ];
