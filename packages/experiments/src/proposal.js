@@ -2,7 +2,7 @@ import { E } from '@endo/far';
 
 const contractName = 'counter';
 export const startContract = async ({
-  consume: { chainStorage, startUpgradable },
+  consume: { chainStorage, startUpgradable, chainTimerService },
   installation: {
     consume: { [contractName]: installation },
   },
@@ -18,7 +18,7 @@ export const startContract = async ({
     installation,
     issuerKeywordRecord: {},
     terms: {},
-    privateArgs: { storageNode },
+    privateArgs: { storageNode, timerService: chainTimerService },
     label: contractName,
   });
 
@@ -35,6 +35,7 @@ export const getManifest = ({ restoreRef }, { installKeys }) => ({
         chainStorage: true,
         contractKits: true,
         startUpgradable: true,
+        chainTimerService: true,
       },
       installation: {
         consume: { [contractName]: true },
