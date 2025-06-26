@@ -9,11 +9,11 @@
  *   orchestration package.
  */
 
-import { Fail, makeError, q } from '@endo/errors';
 import { makeTracer, NonNullish } from '@agoric/internal';
+import { Fail, makeError, q } from '@endo/errors';
+import { AxelarGMPMessageType } from '../axelar-types.js';
 import { denomHash } from '../utils/denomHash.js';
 import { gmpAddresses } from '../utils/gmp.js';
-import { AxelarGMPMessageType } from '../axelar-types.js';
 
 /**
  * @import {GuestInterface, GuestOf} from '@agoric/async-flow';
@@ -118,7 +118,7 @@ export const createAndMonitorLCA = async (
     destination_chain: 'Ethereum',
     destination_address: factoryContractAddress,
     payload: [],
-    type: AxelarGMPMessageType.ContractCall,
+    type: AxelarGMPMessageType.ContractCallWithToken,
     fee: {
       amount: '1', // TODO: Get fee amount from api
       recipient: gmpAddresses.AXELAR_GAS,

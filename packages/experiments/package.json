@@ -1,12 +1,17 @@
 {
-  "name": "agoric-contract-experiments",
+  "name": "agoric-experiments",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
     "build": "agoric run src/builder.js",
-    "deploy": "yarn build && runInsideContainer=true planFile=startContract-plan.json node deploy.js"
+    "deploy": "yarn build && runInsideContainer=true planFile=startContract-plan.json node deploy.js",
+    "bundles": "agoric run ../builders/scripts/orchestration/axelar-gmp.build.js --net=localhost --peer=axelar:connection-0:channel-0:uaxl",
+    "build:contract": "cd ../orchestration && yarn esbuild:axelar && cd ../experiments && yarn bundles",
+    "build:token": "agoric run ../../multichain-testing/src/register-interchain-bank-assets.builder.js --assets='[{\"denom\":\"ibc/2CC0B1B7A981ACC74854717F221008484603BB8360E81B262411B0D830EDE9B0\",\"issuerName\":\"AXL\",\"decimalPlaces\":6}]'",
+    "deploy-axl": "yarn build:contract && runInsideContainer=true planFile=startAxelarGmp-plan.json node deploy.js",
+    "deploy:token": "yarn build:token && runInsideContainer=true planFile=eval-register-interchain-bank-assets-plan.json node deploy.js"
   },
   "dependencies": {
     "@agoric/deploy-script-support": "workspace:*",

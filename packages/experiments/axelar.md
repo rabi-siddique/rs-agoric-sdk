@@ -1,0 +1,2 @@
+- `cd packages/axelar-local-dev-cosmos && npm run start`
+- `cd packages/experiments && deploy:token && deploy-axl`
