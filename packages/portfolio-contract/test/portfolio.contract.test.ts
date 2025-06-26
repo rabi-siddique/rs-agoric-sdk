@@ -3,22 +3,39 @@ import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
 
 import { MsgLock } from '@agoric/cosmic-proto/noble/dollar/vaults/v1/tx.js';
 import { MsgSwap } from '@agoric/cosmic-proto/noble/swap/v1/tx.js';
+import { AmountMath, makeIssuerKit } from '@agoric/ertp';
+import { eventLoopIteration } from '@agoric/internal/src/testing-utils.js';
+import { gmpAddresses } from '@agoric/orchestration/src/utils/gmp.js';
+import { heapVowE as VE } from '@agoric/vow';
 import type { Installation } from '@agoric/zoe';
+import buildZoeManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { setUpZoeForTest } from '@agoric/zoe/tools/setup-zoe.js';
+import { q } from '@endo/errors';
 import { E, passStyleOf } from '@endo/far';
-import { M, mustMatch } from '@endo/patterns';
+import { M, matches, mustMatch } from '@endo/patterns';
 import type { ExecutionContext } from 'ava';
-import { createRequire } from 'module';
-import { makeUSDNIBCTraffic } from './mocks.ts';
+import * as contractExports from '../src/portfolio.contract.ts';
+import { makeAxelarMemo } from '../src/portfolio.flows.ts';
+import {
+  makeProposalShapes,
+  OfferArgsShapeFor,
+  type GmpArgsContractCall,
+  type GmpGasRatio,
+} from '../src/type-guards.ts';
+import { axelarChainsMap, makeUSDNIBCTraffic } from './mocks.ts';
 import { makeTrader } from './portfolio-actors.ts';
-import { setupPortfolioTest } from './supports.ts';
+import {
+  chainInfoFantasyTODO,
+  makeIncomingEVMEvent,
+  setupPortfolioTest,
+} from './supports.ts';
 import { makeWallet } from './wallet-offer-tools.ts';
 
-const nodeRequire = createRequire(import.meta.url);
-
 const contractName = 'ymax0';
-const contractFile = nodeRequire.resolve('../src/portfolio.contract.ts');
-type StartFn = typeof import('../src/portfolio.contract.ts').start;
+type StartFn = typeof contractExports.start;
+const { values } = Object;
+
+const lca0 = 'agoric1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqp7zqht';
 
 /** from https://www.mintscan.io/noble explorer */
 const explored = [
@@ -55,15 +72,23 @@ const deploy = async (t: ExecutionContext) => {
   t.log('contract deployment', contractName);
 
   const installation: Installation<StartFn> =
-    await bundleAndInstall(contractFile);
+    await bundleAndInstall(contractExports);
   t.is(passStyleOf(installation), 'remotable');
 
-  const { usdc } = common.brands;
+  const { usdc, poc24 } = common.brands;
+  const timerService = buildZoeManualTimer();
+
+  const { agoric, noble, axelar, osmosis } = chainInfoFantasyTODO;
   const started = await E(zoe).startInstance(
     installation,
-    { USDC: usdc.issuer },
+    { USDC: usdc.issuer, Access: poc24.issuer },
     {}, // terms
-    common.commonPrivateArgs,
+    {
+      ...common.commonPrivateArgs,
+      axelarChainsMap,
+      timerService,
+      chainInfo: { agoric, noble, axelar, osmosis },
+    }, // privateArgs
   );
   t.notThrows(() =>
     mustMatch(
@@ -76,31 +101,219 @@ const deploy = async (t: ExecutionContext) => {
       }),
     ),
   );
-  return { common, zoe, started };
+  return { common, zoe, started, timerService };
 };
 
-test('open portfolio with USDN position', async t => {
+export const setupTrader = async (t, initial = 10_000) => {
   const { common, zoe, started } = await deploy(t);
-  const { usdc } = common.brands;
+  const { usdc, poc24 } = common.brands;
   const { when } = common.utils.vowTools;
 
-  const myBalance = usdc.units(10_000);
+  const myBalance = usdc.units(initial);
   const funds = await common.utils.pourPayment(myBalance);
-  const myWallet = makeWallet({ USDC: usdc }, zoe, when);
+  const { mint: _, ...poc24SansMint } = poc24;
+  const myWallet = makeWallet({ USDC: usdc, Access: poc24SansMint }, zoe, when);
   await E(myWallet).deposit(funds);
+  await E(myWallet).deposit(poc24.mint.mintPayment(poc24.make(1n)));
   const trader1 = makeTrader(myWallet, started.instance);
-  t.log('I am a power user with', myBalance, 'on Agoric');
 
   const { ibcBridge } = common.mocks;
-  for (const { msg, ack } of Object.values(makeUSDNIBCTraffic())) {
+  for (const { msg, ack } of values(makeUSDNIBCTraffic())) {
     ibcBridge.addMockAck(msg, ack);
   }
 
-  const doneP = trader1.openPortfolio(t, {
-    USDN: usdc.units(3_333),
-    Aave: usdc.units(3_333),
-    Compound: usdc.units(3_333),
+  return { common, zoe, started, myBalance, myWallet, trader1 };
+};
+
+test('ProposalShapes', t => {
+  const { brand: USDC } = makeIssuerKit('USDC');
+  const { brand: Poc24 } = makeIssuerKit('Poc24');
+  const shapes = makeProposalShapes(USDC, Poc24);
+
+  const usdc = (value: bigint) => AmountMath.make(USDC, value);
+  const poc24 = (value: bigint) => AmountMath.make(Poc24, value);
+  const cases = harden({
+    openPortfolio: {
+      pass: {
+        noPositions: { give: { Access: poc24(1n) } },
+        openUSDN: { give: { USDN: usdc(123n), Access: poc24(1n) } },
+        aaveNeedsGMPFee: {
+          give: {
+            AaveGmp: usdc(123n),
+            Aave: usdc(3000n),
+            AaveAccount: usdc(3000n),
+            Access: poc24(1n),
+          },
+        },
+        open3: {
+          give: {
+            USDN: usdc(123n),
+            Aave: usdc(3000n),
+            AaveGmp: usdc(123n),
+            AaveAccount: usdc(3000n),
+            Compound: usdc(1000n),
+            CompoundGmp: usdc(3000n),
+            CompoundAccount: usdc(3000n),
+            Access: poc24(1n),
+          },
+        },
+      },
+      fail: {
+        noGive: {},
+        missingGMPFee: { give: { Aave: usdc(3000n) } },
+        noPayouts: { want: { USDN: usdc(123n) } },
+        strayKW: { give: { X: usdc(1n) } },
+        // New negative cases for openPortfolio
+        accessWrongBrand: { give: { Access: usdc(1n) } },
+        accessZeroValue: { give: { Access: poc24(0n) } },
+        usdnWrongBrandWithAccess: {
+          give: { USDN: poc24(123n), Access: poc24(1n) },
+        },
+        aaveIncompleteAndAccessOk: {
+          give: { Aave: usdc(100n), AaveGmp: usdc(100n), Access: poc24(1n) },
+        },
+        compoundIncompleteAndAccessOk: {
+          give: {
+            Compound: usdc(100n),
+            CompoundGmp: usdc(100n),
+            Access: poc24(1n),
+          },
+        },
+        openTopLevelStray: { give: { Access: poc24(1n) }, extra: 'property' },
+      },
+    },
+    rebalance: {
+      pass: {
+        deposit: { give: { USDN: usdc(123n) } },
+        withdraw: { want: { USDN: usdc(123n) } },
+      },
+      fail: {
+        both: { give: { USDN: usdc(123n) }, want: { USDN: usdc(123n) } },
+        // New negative cases for rebalance
+        rebalGiveHasAccess: { give: { Access: poc24(1n) } },
+        rebalGiveUsdnBadBrand: { give: { USDN: poc24(1n) } },
+        rebalGiveAaveIncomplete: { give: { Aave: usdc(100n) } },
+        rebalWantBadKey: { want: { BogusProtocol: usdc(1n) } },
+        rebalWantUsdnBadBrand: { want: { USDN: poc24(1n) } },
+        rebalEmpty: {},
+        rebalGiveTopLevelStray: {
+          give: { USDN: usdc(1n) },
+          extra: 'property',
+        },
+        rebalWantTopLevelStray: {
+          want: { USDN: usdc(1n) },
+          extra: 'property',
+        },
+      },
+    },
   });
+  const { entries } = Object;
+  for (const [desc, { pass, fail }] of entries(cases)) {
+    for (const [name, proposal] of entries(pass)) {
+      t.log(`${desc} ${name}: ${q(proposal)}`);
+      // mustMatch() gives better diagnostics than matches()
+      t.notThrows(() => mustMatch(proposal, shapes[desc]), name);
+    }
+    for (const [name, proposal] of entries(fail)) {
+      t.log(`!${desc} ${name}: ${q(proposal)}`);
+      t.false(matches(proposal, shapes[desc]), name);
+    }
+  }
+});
+
+test('validate Ratio in OfferArgs', t => {
+  const cases = harden({
+    pass: {
+      empty: {},
+      aaveFull: { Aave: { gmpRatio: [1n, 2n], acctRatio: [3n, 4n] } },
+      compoundBoth: { Compound: { gmpRatio: [1n, 2n], acctRatio: [3n, 4n] } },
+    },
+    fail: {
+      // TODO: add a case where numerator > denominator
+      denominatorInt: { Aave: { gmpRatio: [1n, 2] } },
+      denominatorNeg: { Aave: { gmpRatio: [1n, -2n] } },
+      denominatorZero: { Compound: { gmpRatio: [1n, 0n] } },
+      numeratorInt: { Aave: { gmpRatio: [1, 2n] } },
+      numeratorNeg: { Aave: { gmpRatio: [-1n, 2n] } },
+      numeratorZero: { Compound: { gmpRatio: [0n, 2n] } },
+    },
+  });
+
+  const { pass, fail } = cases;
+  for (const [name, offerArgs] of Object.entries(pass)) {
+    t.log(`${name}: ${q(offerArgs)}`);
+    t.notThrows(
+      () => mustMatch(offerArgs, OfferArgsShapeFor.openPortfolio),
+      name,
+    );
+  }
+
+  for (const [name, offerArgs] of Object.entries(fail)) {
+    t.log(`!${name}: ${q(offerArgs)}`);
+    t.false(matches(offerArgs, OfferArgsShapeFor.openPortfolio), name);
+  }
+});
+
+test('makeAxelarMemo constructs correct memo JSON', t => {
+  const { brand } = makeIssuerKit('USDC');
+
+  const type = 2; // contract call with tokens
+  const destinationEVMChain = 'Avalanche';
+  const destinationAddress = '0x58E0bd49520364A115CeE4B03DffC1C08A2D1D09';
+  const gasRatio: GmpGasRatio = [1n, 2n];
+
+  const gmpArgs: GmpArgsContractCall = {
+    type,
+    contractInvocationData: [],
+    destinationEVMChain,
+    destinationAddress,
+    keyword: 'Gas',
+    gasRatio,
+    amounts: {
+      Gas: {
+        brand,
+        value: 2000000n,
+      },
+    },
+  };
+
+  // From a valid transaction from AxelarScan: https://testnet.axelarscan.io/tx/CA5A2E8CA6770B0FBBC1789DE5FB14F5955BD62CD0C1F975C88DE3DA657025F2
+  const expectedPayload = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  ];
+
+  const result = makeAxelarMemo(axelarChainsMap, gmpArgs);
+  const parsed = JSON.parse(result);
+
+  t.deepEqual(parsed, {
+    type,
+    destination_chain: destinationEVMChain,
+    destination_address: destinationAddress,
+    payload: expectedPayload,
+    fee: {
+      amount: String(
+        (Number(gasRatio[0]) / Number(gasRatio[1])) *
+          Number(gmpArgs.amounts.Gas.value),
+      ),
+      recipient: gmpAddresses.AXELAR_GAS,
+    },
+  });
+});
+
+test('open portfolio with USDN position', async t => {
+  const { trader1, common } = await setupTrader(t);
+  const { usdc, poc24 } = common.brands;
+
+  const doneP = trader1.openPortfolio(
+    t,
+    {
+      USDN: usdc.units(3_333),
+      Access: poc24.make(1n),
+    },
+    { destinationEVMChain: 'Ethereum' },
+  );
 
   // ack IBC transfer for forward
   await common.utils.transmitVTransferEvent('acknowledgementPacket', -1);
@@ -109,13 +322,200 @@ test('open portfolio with USDN position', async t => {
   const result = done.result as any;
   t.is(passStyleOf(result.invitationMakers), 'remotable');
   t.like(result.publicTopics, [
-    { description: 'USDN ICA', storagePath: 'cosmos:noble-1:cosmos1test' },
+    { description: 'Portfolio', storagePath: 'orchtest.portfolios.portfolio0' },
   ]);
-  const [{ storagePath: myUSDNAddress }] = result.publicTopics;
-  t.log('I can see where my money is:', myUSDNAddress);
+  t.is(result.publicTopics.length, 1);
+  // TODO: look in storage for address
+  // `cosmos:agoric-3:${lca0}`
+  const addrs = result.publicTopics.map(t => t.storagePath);
+  t.log('I can see where my money is:', addrs);
   t.log('refund', done.payouts);
 });
 
-test.todo('User can see transfer in progress');
-test.todo('Pools SHOULD include Aave');
-test.todo('Pools SHOULD include Compound');
+// TODO: depositForBurn is throwing
+test('open a portfolio with Aave position', async t => {
+  const { trader1, common } = await setupTrader(t);
+  const { usdc, poc24 } = common.brands;
+
+  const actualP = trader1.openPortfolio(
+    t,
+    {
+      Access: poc24.make(1n),
+      AaveAccount: usdc.make(100n), // fee
+      AaveGmp: usdc.make(100n), // fee
+      Aave: usdc.units(3_333),
+    },
+    {
+      destinationEVMChain: 'Base',
+      Aave: { acctRatio: [1n, 2n], gmpRatio: [1n, 2n] },
+    },
+  );
+  await eventLoopIteration(); // let IBC message go out
+  await common.utils.transmitVTransferEvent('acknowledgementPacket', -1);
+  console.log('ackd send to Axelar to create account');
+
+  const { transferBridge } = common.mocks;
+
+  // stimulate upcall back from Axelar
+  const event = makeIncomingEVMEvent();
+  const ackNP = VE(transferBridge)
+    .fromBridge(event)
+    .finally(() => console.log('@@@fromBridge for tap done'))
+    .then(() => eventLoopIteration())
+    .then(() => {
+      // ack CCTP
+      common.utils
+        .transmitVTransferEvent('acknowledgementPacket', -1)
+        .then(() => eventLoopIteration())
+        .finally(() => {
+          console.log('@@@ack CCTP done');
+          // ack IBC transfer to Axelar to open Aave position
+          return common.utils
+            .transmitVTransferEvent('acknowledgementPacket', -1)
+            .finally(() => {
+              console.log('@@@ack Axelar done');
+              return;
+            });
+        });
+    });
+
+  const actual = await actualP;
+  const result = actual.result as any;
+  t.is(passStyleOf(result.invitationMakers), 'remotable');
+  const addrs = result.publicTopics.map(t => t.storagePath);
+  t.log('I can see where my money is:', addrs);
+  t.is(result.publicTopics.length, 1);
+  // TODO: get addresses from vstorage
+  // `cosmos:${chainInfo.agoric.chainId}:${lca0}`,
+  t.like(result.publicTopics, [
+    { description: 'Portfolio', storagePath: 'orchtest.portfolios.portfolio0' },
+  ]);
+  t.log('refund', actual.payouts);
+});
+
+// TODO: to deal with bridge coordination, move this to a bootstrap test
+test('open a portfolio with Compound position', async t => {
+  const { trader1, common } = await setupTrader(t);
+  const { usdc, poc24 } = common.brands;
+
+  const actualP = trader1.openPortfolio(
+    t,
+    {
+      Access: poc24.make(1n),
+      CompoundAccount: usdc.make(100n), // fee
+      CompoundGmp: usdc.make(100n), // fee
+      Compound: usdc.units(3_333),
+    },
+    {
+      destinationEVMChain: 'Base',
+      Compound: { acctRatio: [1n, 2n], gmpRatio: [1n, 2n] },
+    },
+  );
+  await eventLoopIteration(); // let IBC message go out
+  await common.utils.transmitVTransferEvent('acknowledgementPacket', -1);
+  console.log('ackd send to Axelar to create account');
+
+  const { transferBridge } = common.mocks;
+
+  // stimulate upcall back from Axelar
+  const event = makeIncomingEVMEvent();
+  const ackNP = VE(transferBridge)
+    .fromBridge(event)
+    .finally(() => console.log('@@@fromBridge for tap done'))
+    .then(() => eventLoopIteration())
+    .then(() => {
+      // ack CCTP
+      common.utils
+        .transmitVTransferEvent('acknowledgementPacket', -1)
+        .then(() => eventLoopIteration())
+        .finally(() => {
+          console.log('@@@ack CCTP done');
+          // ack IBC transfer to Axelar to open Aave position
+          return common.utils
+            .transmitVTransferEvent('acknowledgementPacket', -1)
+            .finally(() => {
+              console.log('@@@ack Axelar done');
+              return;
+            });
+        });
+    });
+
+  const actual = await actualP;
+  const result = actual.result as any;
+  t.is(passStyleOf(result.invitationMakers), 'remotable');
+  const addrs = result.publicTopics.map(t => t.storagePath);
+  t.log('I can see where my money is:', addrs);
+  // TODO: check vstorage
+  // `cosmos:${chainInfo.agoric.chainId}:${lca0}`
+  // 'cosmos:noble-1:cosmos1test'
+  t.is(result.publicTopics.length, 1);
+  t.like(result.publicTopics, [
+    { description: 'Portfolio', storagePath: 'orchtest.portfolios.portfolio0' },
+  ]);
+  t.log('refund', actual.payouts);
+});
+
+// TODO: to deal with bridge coordination, move this to a bootstrap test
+test('open portfolio with USDN, Aave positions', async t => {
+  const { trader1, common } = await setupTrader(t);
+  const { usdc, poc24 } = common.brands;
+
+  const doneP = trader1.openPortfolio(
+    t,
+    {
+      Access: poc24.make(1n),
+      AaveAccount: usdc.make(100n), // fee
+      AaveGmp: usdc.make(100n), // fee
+      Aave: usdc.units(3_333),
+    },
+    {
+      destinationEVMChain: 'Base',
+      Aave: { acctRatio: [1n, 2n], gmpRatio: [1n, 2n] },
+    },
+  );
+  await eventLoopIteration(); // let outgoing IBC happen
+  console.log('openPortfolio, eventloop');
+  await common.utils.transmitVTransferEvent('acknowledgementPacket', -1);
+  console.log('ackd send to noble');
+
+  const { transferBridge } = common.mocks;
+
+  // ack IBC transfer to Noble
+  const ackNP = VE(transferBridge)
+    .fromBridge(makeIncomingEVMEvent())
+    .finally(() => console.log('@@@fromAxelar done'))
+    .then(() => eventLoopIteration())
+    .then(() => {
+      // let outgoing IBC happen
+      common.utils
+        .transmitVTransferEvent('acknowledgementPacket', -1)
+        .then(() => eventLoopIteration())
+        .finally(() => {
+          console.log('@@@ack Noble done');
+          // ack IBC transfer to Axelar to set up account
+          return common.utils
+            .transmitVTransferEvent('acknowledgementPacket', -1)
+            .finally(() => {
+              console.log('@@@ack Axelar done');
+              console.log('@@@fromBridge toTap');
+              return;
+            });
+        });
+    });
+
+  await eventLoopIteration(); // let bridge I/O happen
+
+  const [done] = await Promise.all([doneP, ackNP]);
+  const result = done.result as any;
+  t.is(passStyleOf(result.invitationMakers), 'remotable');
+  const addrs = result.publicTopics.map(t => t.storagePath);
+  t.log('I can see where my money is:', addrs);
+  // TODO: check vstorage
+  // `cosmos:${chainInfo.agoric.chainId}:${lca0}`
+  // 'cosmos:noble-1:cosmos1test'
+  t.is(result.publicTopics.length, 1);
+  t.like(result.publicTopics, [
+    { description: 'Portfolio', storagePath: 'orchtest.portfolios.portfolio0' },
+  ]);
+  t.log('refund', done.payouts);
+});

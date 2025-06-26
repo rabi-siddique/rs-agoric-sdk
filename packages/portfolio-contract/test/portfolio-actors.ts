@@ -1,8 +1,7 @@
-import type { Amount } from '@agoric/ertp';
 import type { Instance } from '@agoric/zoe';
 import type { ExecutionContext } from 'ava';
-import type { YieldProtocol } from '../src/constants.js';
 import { type start } from '../src/portfolio.contract.ts';
+import type { OfferArgsFor, OpenPortfolioGive } from '../src/type-guards.ts';
 import type { WalletTool } from './wallet-offer-tools.ts';
 
 export const makeTrader = (
@@ -13,7 +12,8 @@ export const makeTrader = (
   return harden({
     async openPortfolio(
       t: ExecutionContext,
-      give: Partial<Record<YieldProtocol, Amount<'nat'>>>,
+      give: OpenPortfolioGive,
+      offerArgs: OfferArgsFor['openPortfolio'] = {},
     ) {
       const invitationSpec = {
         source: 'contract' as const,
@@ -26,6 +26,7 @@ export const makeTrader = (
         id: `openP-${(nonce += 1)}`,
         invitationSpec,
         proposal,
+        offerArgs,
       });
     },
   });
