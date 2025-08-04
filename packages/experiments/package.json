@@ -7,7 +7,8 @@
     "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
     "build": "agoric run src/builder.js",
     "build-gmp": "bash build-gmp.sh",
-    "deploy": "yarn build-gmp && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js"
+    "deploy": "yarn build-gmp && runInsideContainer=true net=devnet planFile=startAxelarGmp-plan.json node deploy.js",
+    "register:axl": "bash register-axl.sh && runInsideContainer=true net=devnet planFile=eval-register-interchain-bank-assets-plan.json node deploy.js"
   },
   "dependencies": {
     "@agoric/deploy-script-support": "workspace:*",

@@ -14,8 +14,9 @@ const net = process.env.net;
 const runInsideContainer = process.env.runInsideContainer == 'true';
 
 const CHAINID = chainIds[net];
+console.log('CHAINID', CHAINID);
 const GAS_ADJUSTMENT = '1.2';
-const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
+const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --node=https://devnet.rpc.agoric.net:443 --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
 const walletName = 'gov1';
 
 let script = '';
@@ -90,21 +91,20 @@ const installBundles = async () => {
   }
 };
 
-const acceptProposal = async () => {
+const submitProposal = async () => {
   console.log(`Submitting proposal to evaluate ${script}`);
 
   const baseDir = '/usr/src';
   const submitCommand = `cd ${baseDir} && agd tx gov submit-proposal swingset-core-eval ${permit} ${script} --title='Install ${script}' --description='Evaluate ${script}' --deposit=10000000ubld --from ${walletName} ${SIGN_BROADCAST_OPTS} -o json`;
   await execCmd(submitCommand);
+};
 
-  await new Promise(resolve => setTimeout(resolve, 5000));
-
+const acceptProposal = async () => {
+  const baseDir = '/usr/src';
   const queryCmd = `cd ${baseDir} && agd query gov proposals --output json | jq -c '[.proposals[] | if .proposal_id == null then .id else .proposal_id end | tonumber] | max'`;
-
   const result = runInsideContainer
     ? await execa('docker', ['exec', '-i', 'agoric', 'bash', '-c', queryCmd])
     : await execa('bash', ['-c', queryCmd]);
-
   const proposalId = runInsideContainer
     ? result.stdout
     : (() => {
@@ -112,12 +112,10 @@ const acceptProposal = async () => {
         const proposalId = match?.[1];
         return proposalId;
       })();
-
   console.log(`Voting on proposal ID ${proposalId}`);
   await execCmd(
     `agd tx gov vote ${proposalId} yes --from=validator ${SIGN_BROADCAST_OPTS}`,
   );
-
   console.log(`Fetching details for proposal ID ${proposalId}`);
   const detailsCommand = `agd query gov proposals --output json | jq -c '.proposals[] | select(.proposal_id == "${proposalId}" or .id == "${proposalId}") | [.proposal_id or .id, .voting_end_time, .status]'`;
   await execCmd(detailsCommand);
@@ -139,6 +137,7 @@ const main = async () => {
 
     await copyFilesToContainer();
     await installBundles();
+    await submitProposal();
     if (net === 'local') {
       await acceptProposal();
     }

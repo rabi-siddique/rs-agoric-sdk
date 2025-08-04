@@ -16,4 +16,10 @@ agoric run builders/scripts/orchestration/axelar-gmp.build.js \
 
 # Copy plan file to destination
 cp /home/rabi/Desktop/Agoric/rs-agoric-sdk/packages/startAxelarGmp-plan.json \
-   /home/rabi/Desktop/Agoric/rs-agoric-sdk/packages/experiments || exit 1
+  /home/rabi/Desktop/Agoric/rs-agoric-sdk/packages/experiments || exit 1
+
+cp /home/rabi/Desktop/Agoric/rs-agoric-sdk/packages/startAxelarGmp-permit.json \
+  /home/rabi/Desktop/Agoric/rs-agoric-sdk/packages/experiments || exit 1
+
+cp /home/rabi/Desktop/Agoric/rs-agoric-sdk/packages/startAxelarGmp.js \
+  /home/rabi/Desktop/Agoric/rs-agoric-sdk/packages/experiments || exit 1
