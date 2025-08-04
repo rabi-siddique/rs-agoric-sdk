@@ -14,18 +14,19 @@ import { E } from '@endo/far';
  * @import {start as StartFn} from '@agoric/orchestration/src/examples/axelar-gmp.contract.js';
  */
 
-const trace = makeTracer('start axelarGmp', true);
+const contractName = 'axelarGmpV1';
+const trace = makeTracer(`start ${contractName}`, true);
 
 /**
  * @param {BootstrapPowers & {
  *   installation: {
  *     consume: {
- *       axelarGmp: Installation<StartFn>;
+ *       axelarGmpV1: Installation<StartFn>;
  *     };
  *   };
  *   instance: {
  *     produce: {
- *       axelarGmp: Producer<Instance<StartFn>>;
+ *       axelarGmpV1: Producer<Instance<StartFn>>;
  *     };
  *   };
  *   issuer: {
@@ -53,10 +54,10 @@ export const startAxelarGmp = async (
       startUpgradable,
     },
     installation: {
-      consume: { axelarGmp },
+      consume: { axelarGmpV1 },
     },
     instance: {
-      produce: { axelarGmp: produceInstance },
+      produce: { [contractName]: produceInstance },
     },
     issuer: {
       consume: { BLD },
@@ -76,7 +77,9 @@ export const startAxelarGmp = async (
       localchain,
       marshaller,
       orchestrationService: cosmosInterchainService,
-      storageNode: E(NonNullish(await chainStorage)).makeChildNode('axelarGmp'),
+      storageNode: E(NonNullish(await chainStorage)).makeChildNode(
+        contractName,
+      ),
       timerService: chainTimerService,
       chainInfo,
       assetInfo,
@@ -90,8 +93,8 @@ export const startAxelarGmp = async (
 
   trace('Starting contract instance');
   const { instance } = await E(startUpgradable)({
-    label: 'axelarGmp',
-    installation: axelarGmp,
+    label: contractName,
+    installation: axelarGmpV1,
     issuerKeywordRecord,
     privateArgs,
   });
@@ -114,10 +117,10 @@ export const getManifest = ({ restoreRef }, { installationRef, options }) => {
           startUpgradable: true,
         },
         installation: {
-          consume: { axelarGmp: true },
+          consume: { [contractName]: true },
         },
         instance: {
-          produce: { axelarGmp: true },
+          produce: { [contractName]: true },
         },
         issuer: {
           consume: { BLD: true },
@@ -125,7 +128,7 @@ export const getManifest = ({ restoreRef }, { installationRef, options }) => {
       },
     },
     installations: {
-      axelarGmp: restoreRef(installationRef),
+      [contractName]: restoreRef(installationRef),
     },
     options,
   };
