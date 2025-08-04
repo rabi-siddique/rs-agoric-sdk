@@ -31,7 +31,6 @@ const trace = makeTracer('start axelarGmp', true);
  *   issuer: {
  *     consume: {
  *       BLD: Issuer<'nat'>;
- *       IST: Issuer<'nat'>;
  *     };
  *   };
  * }} powers
@@ -60,7 +59,7 @@ export const startAxelarGmp = async (
       produce: { axelarGmp: produceInstance },
     },
     issuer: {
-      consume: { BLD, IST },
+      consume: { BLD },
     },
   },
   { options: { chainInfo, assetInfo } },
@@ -84,22 +83,8 @@ export const startAxelarGmp = async (
     }),
   );
 
-  /** @param {() => Promise<Issuer>} p */
-  const safeFulfill = async p =>
-    E.when(
-      p(),
-      i => i,
-      () => undefined,
-    );
-
-  const axlIssuer = await safeFulfill(() =>
-    E(agoricNames).lookup('issuer', 'AXL'),
-  );
-
   const issuerKeywordRecord = harden({
     BLD: await BLD,
-    IST: await IST,
-    ...(axlIssuer && { AXL: axlIssuer }),
   });
   trace('issuerKeywordRecord', issuerKeywordRecord);
 
@@ -126,7 +111,6 @@ export const getManifest = ({ restoreRef }, { installationRef, options }) => {
           chainStorage: true,
           cosmosInterchainService: true,
           localchain: true,
-
           startUpgradable: true,
         },
         installation: {
@@ -136,7 +120,7 @@ export const getManifest = ({ restoreRef }, { installationRef, options }) => {
           produce: { axelarGmp: true },
         },
         issuer: {
-          consume: { BLD: true, IST: true },
+          consume: { BLD: true },
         },
       },
     },
