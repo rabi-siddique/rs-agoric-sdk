@@ -128,6 +128,7 @@ export const startOrchContract = async (
       agoricNames,
     }),
   );
+
   const privateArgs = await makePrivateArgs(
     orchestrationPowers,
     marshaller,
@@ -155,6 +156,8 @@ export const startOrchContract = async (
 
   /** @type {UpgradeKit<SF>} */
   const fullKit = harden({ ...kit, privateArgs });
+  // @ts-expect-error XXX tsc gets confused?
+  produce[`${name}Kit`].reset();
   // @ts-expect-error XXX tsc gets confused?
   produce[`${name}Kit`].resolve(fullKit);
 

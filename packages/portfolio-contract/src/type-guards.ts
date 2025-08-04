@@ -20,25 +20,23 @@
  *
  * For usage examples, see `makeTrader` in {@link ../test/portfolio-actors.ts}.
  */
-import { type Amount, type Brand, type NatValue } from '@agoric/ertp';
+import type { Amount, Brand, NatAmount, NatValue } from '@agoric/ertp';
 import type { TypedPattern } from '@agoric/internal';
-import {
-  AnyNatAmountShape,
-  type AccountId,
-  type CaipChainId,
-} from '@agoric/orchestration';
+import { AnyNatAmountShape, type AccountId } from '@agoric/orchestration';
 import type {
   ContinuingInvitationSpec,
   ContractInvitationSpec,
 } from '@agoric/smart-wallet/src/invitations.js';
 import { Fail } from '@endo/errors';
 import { M } from '@endo/patterns';
-import { AxelarChains, YieldProtocol } from './constants.js';
+import { AxelarChain, YieldProtocol } from './constants.js';
 import type { EVMContractAddresses, start } from './portfolio.contract.js';
 import type { PortfolioKit } from './portfolio.exo.js';
 
+export type { OfferArgsFor } from './type-guards-steps.js';
+
 // #region preliminaries
-const { fromEntries, keys } = Object;
+const { keys } = Object;
 
 /**
  * @param brand must be a 'nat' brand, not checked
@@ -70,23 +68,6 @@ export type PortfolioContinuingInvitationMaker =
   keyof PortfolioKit['invitationMakers'];
 
 // #region Proposal Shapes
-export type AaveGive = {
-  AaveGmp: Amount<'nat'>;
-  AaveAccount: Amount<'nat'>;
-  Aave: Amount<'nat'>;
-};
-export type CompoundGive = {
-  CompoundGmp: Amount<'nat'>;
-  CompoundAccount: Amount<'nat'>;
-  Compound: Amount<'nat'>;
-};
-export type GmpGive = {} | AaveGive | CompoundGive | (AaveGive & CompoundGive);
-export type OpenPortfolioGive = {
-  USDN?: Amount<'nat'>;
-  NobleFees?: Amount<'nat'>;
-  Access?: Amount<'nat'>;
-} & ({} | GmpGive);
-
 /**
  * Proposal shapes for portfolio operations.
  *
@@ -94,95 +75,115 @@ export type OpenPortfolioGive = {
  * **rebalance**: Add funds (give) or withdraw funds (want) from protocols
  */
 export type ProposalType = {
-  openPortfolio: { give: OpenPortfolioGive };
+  openPortfolio: {
+    give: {
+      /** required iff the contract was started with an Access issuer */
+      Access?: NatAmount;
+      Deposit?: NatAmount;
+      GmpFee?: NatAmount;
+    };
+  };
   rebalance:
-    | { give: OpenPortfolioGive; want: {} }
-    | { want: Partial<Record<YieldProtocol, Amount<'nat'>>>; give: {} };
+    | { give: { Deposit?: NatAmount; GmpFee?: NatAmount }; want: {} }
+    | { want: { Cash: NatAmount }; give: { GmpFee?: NatAmount } };
 };
-
-const YieldProtocolShape = M.or(...keys(YieldProtocol));
 
 export const makeProposalShapes = (
   usdcBrand: Brand<'nat'>,
+  feeBrand: Brand<'nat'>,
   accessBrand?: Brand<'nat'>,
 ) => {
-  // TODO: Update usdcAmountShape, to include BLD/aUSDC after discussion with Axelar team
-  const usdcAmountShape = makeNatAmountShape(usdcBrand);
-  const AaveGiveShape = harden({
-    Aave: usdcAmountShape,
-    AaveGmp: usdcAmountShape,
-    AaveAccount: usdcAmountShape,
-  });
-  const CompoundGiveShape = harden({
-    Compound: usdcAmountShape,
-    CompoundGmp: usdcAmountShape,
-    CompoundAccount: usdcAmountShape,
+  const $Shape = makeNatAmountShape(usdcBrand);
+  const FeeShape = makeNatAmountShape(feeBrand);
+  const accessShape = harden({
+    ...(accessBrand && { Access: makeNatAmountShape(accessBrand, 1n) }),
   });
 
-  // The give for openPortfolio and rebalance differ only in required properties
-  const giveWith = x => {
-    return M.splitRecord(
-      x,
-      { USDN: usdcAmountShape, NobleFees: usdcAmountShape },
-      M.or(
-        harden({}),
-        AaveGiveShape,
-        CompoundGiveShape,
-        // TODO: and no others
-        M.and(M.splitRecord(AaveGiveShape), M.splitRecord(CompoundGiveShape)),
-      ),
-    );
-  };
-
-  return {
-    openPortfolio: M.splitRecord(
-      {
-        give: giveWith(
-          accessBrand ? { Access: makeNatAmountShape(accessBrand, 1n) } : {},
-        ),
-      },
-      { want: {}, exit: M.any() },
-      {},
-    ) as TypedPattern<ProposalType['openPortfolio']>,
-    rebalance: M.or(
-      M.splitRecord({ give: giveWith({}) }, { want: {}, exit: M.any() }, {}),
-      M.splitRecord(
-        { want: M.recordOf(YieldProtocolShape, usdcAmountShape) },
-        { give: {}, exit: M.any() },
+  const openPortfolio = M.splitRecord(
+    {
+      give: M.splitRecord(
+        accessShape,
+        { Deposit: $Shape, GmpFee: FeeShape },
         {},
       ),
-    ) as TypedPattern<ProposalType['rebalance']>,
-  };
+    },
+    { want: {}, exit: M.any() },
+    {},
+  ) as TypedPattern<ProposalType['openPortfolio']>;
+  const rebalance = M.or(
+    M.splitRecord(
+      { give: M.splitRecord({}, { Deposit: $Shape, GmpFee: FeeShape }, {}) },
+      { want: {}, exit: M.any() },
+      {},
+    ),
+    M.splitRecord(
+      { want: M.splitRecord({ Cash: $Shape }, {}, {}) },
+      { give: M.splitRecord({}, { GmpFee: FeeShape }, {}), exit: M.any() },
+      {},
+    ),
+  ) as TypedPattern<ProposalType['rebalance']>;
+  return harden({ openPortfolio, rebalance });
 };
+harden(makeProposalShapes);
 // #endregion
 
 // #region Offer Args
-type OfferArgs1 = {
-  destinationEVMChain?: AxelarChains;
-  usdnOut?: NatValue;
-};
 
-const offerArgsShape: TypedPattern<OfferArgs1> = M.splitRecord(
-  {},
-  {
-    destinationEVMChain: M.or(...keys(AxelarChains)),
-    usdnOut: M.nat(),
+type PoolPlaceInfo =
+  | { protocol: 'USDN'; vault: null | 1; chainName: 'noble' }
+  | { protocol: 'Aave' | 'Compound' | 'Beefy'; chainName: AxelarChain };
+
+export const BeefyPoolPlaces = {
+  Beefy_re7_Avalanche: {
+    protocol: 'Beefy',
+    chainName: 'Avalanche',
   },
+} as const satisfies Record<string, PoolPlaceInfo>;
+
+export const PoolPlaces = {
+  USDN: { protocol: 'USDN', vault: null, chainName: 'noble' }, // MsgSwap only
+  USDNVault: { protocol: 'USDN', vault: 1, chainName: 'noble' }, // MsgSwap, MsgLock
+  Aave_Avalanche: { protocol: 'Aave', chainName: 'Avalanche' },
+  Aave_Optimism: { protocol: 'Aave', chainName: 'Optimism' },
+  Aave_Arbitrum: { protocol: 'Aave', chainName: 'Arbitrum' },
+  Aave_Polygon: { protocol: 'Aave', chainName: 'Polygon' },
+  Compound_Avalanche: { protocol: 'Compound', chainName: 'Avalanche' },
+  Compound_Optimism: { protocol: 'Compound', chainName: 'Optimism' },
+  Compound_Arbitrum: { protocol: 'Compound', chainName: 'Arbitrum' },
+  Compound_Polygon: { protocol: 'Compound', chainName: 'Polygon' },
+  ...BeefyPoolPlaces,
+} as const satisfies Record<string, PoolPlaceInfo>;
+harden(PoolPlaces);
+
+/**
+ * Names of places where a portfolio may have a position.
+ */
+export type PoolKey = keyof typeof PoolPlaces;
+
+/** Ext for Extensible: includes PoolKeys in future upgrades */
+export type PoolKeyExt = string;
+
+/** Ext for Extensible: includes PoolKeys in future upgrades */
+export const PoolKeyShapeExt = M.string();
+
+/**
+ * Target allocation mapping from PoolKey to numerator (typically in basis points).
+ * Denominator is implicitly the sum of all numerators.
+ */
+export type TargetAllocation = Partial<Record<PoolKey, NatValue>>;
+
+export const TargetAllocationShape: TypedPattern<TargetAllocation> = M.recordOf(
+  M.or(...keys(PoolPlaces)),
+  M.nat(),
 );
 
-export type OfferArgsFor = {
-  openPortfolio: OfferArgs1;
-  rebalance: OfferArgs1;
-};
+export const TargetAllocationShapeExt: TypedPattern<Record<string, NatValue>> =
+  M.recordOf(PoolKeyShapeExt, M.nat());
 
-export const OfferArgsShapeFor = {
-  openPortfolio: offerArgsShape,
-  rebalance: offerArgsShape,
-};
-harden(OfferArgsShapeFor);
 // #endregion
 
 // #region ymax0 vstorage keys and values
+// XXX the vstorage path API is kinda awkward to use; see ymax-deploy.test.ts
 
 /**
  * Creates vstorage path for portfolio status under published.ymax0.
@@ -202,8 +203,9 @@ export const makePortfolioPath = (id: number) => [`portfolio${id}`];
  */
 export const portfolioIdOfPath = (path: string | string[]) => {
   const segments = typeof path === 'string' ? path.split('.') : path;
-  const [_group, segment] =
-    segments[0] === 'published' ? segments.slice(1) : segments;
+  const where = segments.indexOf('portfolios');
+  where >= 0 || Fail`bad path: ${path}`;
+  const segment = segments[where + 1];
   const id = Number(segment.replace(/^portfolio/, ''));
   Number.isSafeInteger(id) || Fail`bad path: ${path}`;
   return id;
@@ -218,18 +220,15 @@ type FlowStatus = {
   amount: Amount<'nat'>;
   error?: string;
 };
-type GMPStatusTODO = {
-  protocol: YieldProtocol;
-  accountId: AccountId | undefined;
-};
 
 // XXX relate paths to types a la readPublished()
 export type StatusFor = {
   portfolio: {
-    positionCount: number;
+    positionKeys: PoolKeyExt[];
     flowCount: number;
-    // TODO: accountIdByChain: Record<ChainAccountKey, AccountId>;
+    // XXX: accountIdByChain: Record<ChainAccountKey, AccountId>;
     accountIdByChain: Record<string, AccountId>;
+    targetAllocation?: TargetAllocation;
   };
   position: {
     protocol: YieldProtocol;
@@ -239,21 +238,22 @@ export type StatusFor = {
     totalOut: Amount<'nat'>;
   };
   // XXX refactor using AssetMoveDesc
-  flow:
-    | FlowStatus
-    | (Omit<FlowStatus, 'dest'> & { where: string }) // recovery failed
-    | GMPStatusTODO;
+  // XXX how many steps? step: 1, last: 3, for example
+  flow: FlowStatus | (Omit<FlowStatus, 'dest'> & { where: string }); // recovery failed
 };
 
-export const PortfolioStatusShape: TypedPattern<StatusFor['portfolio']> =
-  M.splitRecord({
-    positionCount: M.nat(),
-    flowCount: M.nat(),
-    accountIdByChain: M.recordOf(
-      M.or('agoric', 'noble'), // ChainAccountKey
-      M.string(), // AccountId
-    ),
-  });
+export const PortfolioStatusShapeExt: TypedPattern<StatusFor['portfolio']> =
+  M.splitRecord(
+    {
+      positionKeys: M.arrayOf(PoolKeyShapeExt),
+      flowCount: M.number(),
+      accountIdByChain: M.recordOf(
+        M.or('agoric', 'noble'), // ChainAccountKey
+        M.string(), // AccountId
+      ),
+    },
+    { targetAllocation: TargetAllocationShapeExt },
+  );
 
 /**
  * Creates vstorage path for position transfer history.
@@ -262,13 +262,13 @@ export const PortfolioStatusShape: TypedPattern<StatusFor['portfolio']> =
  * Used by {@link Position.publishStatus} to publish position state.
  *
  * @param parent - Portfolio ID
- * @param id - Position ID within the portfolio
+ * @param key - PoolKey
  * @returns Path segments for vstorage
  */
-export const makePositionPath = (parent: number, id: number) => [
+export const makePositionPath = (parent: number, key: PoolKeyExt) => [
   `portfolio${parent}`,
   'positions',
-  `position${id}`,
+  key,
 ];
 
 export const PositionStatusShape: TypedPattern<StatusFor['position']> =
@@ -314,16 +314,6 @@ export const FlowStatusShape: TypedPattern<StatusFor['flow']> = M.splitRecord(
 // XXX deployment concern, not part of contract external interface
 // but avoid changing the import from the deploy package
 
-// XXX split between chainInfo and contractAddresses
-export type AxelarChainsMap = {
-  [chain in AxelarChain]: {
-    caip: CaipChainId;
-    /**
-     * Axelar chain IDs differ between mainnet and testnet.
-     * See [supported-chains-list.ts](https://github.com/axelarnetwork/axelarjs-sdk/blob/f84c8a21ad9685091002e24cac7001ed1cdac774/src/chains/supported-chains-list.ts)
-     */
-    axelarId: string;
-    contractAddresses: EVMContractAddresses;
-  };
+export type EVMContractAddressesMap = {
+  [chain in AxelarChain]: EVMContractAddresses;
 };
-type AxelarChain = keyof typeof AxelarChains; // rename AxelarChains -> AxelarChain

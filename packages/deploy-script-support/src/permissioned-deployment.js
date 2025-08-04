@@ -13,7 +13,7 @@
  * @see {installBundles}
  * @see {submitCoreEval}
  */
-import { flags } from '@agoric/pola-io';
+import { toCLIOptions } from '@agoric/internal/src/cli-utils.js';
 
 /**
  * @import {CmdRunner} from '@agoric/pola-io';
@@ -34,7 +34,7 @@ import { flags } from '@agoric/pola-io';
  *
  * @param {CmdRunner} agoric
  * @param {FileRd} builder
- * @param {Record<string, string | string[]>} [builderOpts]
+ * @param {string[]} [builderOpts]
  * @param {{cwd?: FileRd}} [io]
  *
  * @returns {Promise<Plan>}
@@ -49,10 +49,10 @@ import { flags } from '@agoric/pola-io';
 export const runBuilder = async (
   agoric,
   builder,
-  builderOpts = {},
+  builderOpts = [],
   { cwd = builder.join('../../') } = {},
 ) => {
-  const cmd = agoric.withFlags(...(builderOpts ? flags(builderOpts) : []));
+  const cmd = agoric.withFlags(...builderOpts);
   const { stdout } = await cmd.exec(['run', String(builder)]);
   const match = stdout?.match(/ (?<name>[-\w]+)-permit.json/);
   if (!(match && match.groups)) {
@@ -163,5 +163,5 @@ export const submitCoreEval = async (
   runTx(agd, [
     ...'gov submit-proposal swingset-core-eval'.split(' '),
     ...evals.map(e => [e.permit, e.script]).flat(),
-    ...flags({ title, description, deposit }),
+    ...toCLIOptions({ title, description, deposit }),
   ]);

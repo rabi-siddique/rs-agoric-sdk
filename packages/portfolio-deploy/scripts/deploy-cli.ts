@@ -9,7 +9,8 @@ import {
   txFlags,
   waitForBlock,
 } from '@agoric/deploy-script-support/src/permissioned-deployment.js';
-import { flags, makeCmdRunner, makeFileRd } from '@agoric/pola-io';
+import { toCLIOptions } from '@agoric/internal/src/cli-utils.js';
+import { makeCmdRunner, makeFileRd } from '@agoric/pola-io';
 import { execa } from 'execa';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -19,8 +20,6 @@ import { parseArgs, type ParseArgsConfig } from 'node:util';
 const TITLE = 'ymax0 w/Noble Dollar';
 
 const USAGE = 'deploy-cli <builder> <key=val>... [--net N] [--from K]';
-
-const { fromEntries } = Object;
 
 const options = /** @type {const} */ {
   net: { type: 'string', default: 'devnet' },
@@ -68,7 +67,12 @@ const main = async (
   // 1. build
   const pkgRd = makeFileRd(pkg, { fsp, path });
   const agoric = makeCmdRunner('npx', { execFile }).subCommand('agoric');
-  const opts = fromEntries(bindings.map(b => b.split('=', 2)));
+  const opts = bindings
+    .map(b => {
+      const [n, v] = b.split('=', 2);
+      return [`--${n}`, v];
+    })
+    .flat();
   console.log('running', builder);
   const plan = await runBuilder(agoric, pkgRd.join(builder), opts, {
     cwd: pkgRd,
@@ -82,7 +86,7 @@ const main = async (
   } = await fetchNetworkConfig(net, { fetch });
   const agdq = makeCmdRunner('agd', { execFile }).withFlags('--node', node);
   const agdTx = agdq.withFlags(
-    ...flags(txFlags({ node, from, chainId })),
+    ...toCLIOptions(txFlags({ node, from, chainId })),
     '--yes',
   );
   for (const b of plan.bundles) {
