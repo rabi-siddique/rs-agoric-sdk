@@ -124,7 +124,7 @@ export const createAndMonitorLCA = async (
     },
   };
 
-  trace(`Gas Amount: ${JSON.stringify(amt.value)}`);
+  trace(`Gas Amount: ${amt.value}`);
 
   try {
     trace('Initiating IBC transfer');
