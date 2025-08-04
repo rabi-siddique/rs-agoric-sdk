@@ -8,14 +8,18 @@
     "build": "agoric run src/builder.js",
     "build-gmp": "bash build-gmp.sh",
     "deploy": "yarn build-gmp && runInsideContainer=true net=devnet planFile=startAxelarGmp-plan.json node deploy.js",
-    "register:axl": "bash register-axl.sh && runInsideContainer=true net=devnet planFile=eval-register-interchain-bank-assets-plan.json node deploy.js"
+    "register:axl": "bash register-axl.sh && runInsideContainer=true net=devnet planFile=eval-register-interchain-bank-assets-plan.json node deploy.js",
+    "make-acc": "makeAccount=true node scripts/make-account.mjs"
   },
   "dependencies": {
+    "@agoric/cosmic-proto": "^0.5.0-u21.0",
     "@agoric/deploy-script-support": "workspace:*",
+    "@agoric/internal": "^0.4.0-u21.0",
     "@agoric/store": "workspace:*",
     "@agoric/vat-data": "workspace:*",
     "@agoric/xsnap": "workspace:*",
     "@agoric/zoe": "workspace:*",
+    "@endo/base64": "^1.0.11",
     "@endo/errors": "^1.2.10",
     "@endo/eventual-send": "^1.3.1",
     "@endo/far": "^1.1.11",
