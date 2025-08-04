@@ -119,12 +119,10 @@ export const createAndMonitorLCA = async (
     payload: buildGasPayload(0n),
     type: AxelarGMPMessageType.ContractCall,
     fee: {
-      amount: amt.value,
+      amount: String(amt.value),
       recipient: gmpAddresses.AXELAR_GAS,
     },
   };
-
-  trace(`Gas Amount: ${amt.value}`);
 
   try {
     trace('Initiating IBC transfer');
