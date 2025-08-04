@@ -116,14 +116,14 @@ export const networkConfigs = {
   devnet: {
     label: 'Agoric Devnet',
     url: 'https://devnet.agoric.net/network-config',
-    rpc: 'https://devnet.rpc.agoric.net',
+    rpc: 'https://devnet.rpc.agoric.net:443',
     api: 'https://devnet.api.agoric.net',
     chainId: 'agoricdev-25',
   },
   emerynet: {
     label: 'Agoric Emerynet',
     url: 'https://emerynet.agoric.net/network-config',
-    rpc: 'https://emerynet.rpc.agoric.net',
+    rpc: 'https://emerynet.rpc.agoric.net:443',
     api: 'https://emerynet.api.agoric.net',
     chainId: 'agoric-emerynet-9',
   },

@@ -1,24 +1,28 @@
+// @ts-check
 import { execa } from 'execa';
 import fs from 'fs';
 
 const planFile = process.env.planFile;
 if (!planFile) throw new Error('PLAN_FILE environment variable is required.');
 
-const CI = process.env.CI === 'true';
-const createVault = process.env.createVault === 'true';
+const chainIds = {
+  local: 'agoriclocal',
+  devnet: 'agoricdev-25',
+};
+
+const net = process.env.net;
 const runInsideContainer = process.env.runInsideContainer == 'true';
 
-const CHAINID = 'agoriclocal';
+const CHAINID = chainIds[net];
 const GAS_ADJUSTMENT = '1.2';
 const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
 const walletName = 'gov1';
-const agops = '/usr/src/agoric-sdk/packages/agoric-cli/bin/agops';
 
 let script = '';
 let permit = '';
 let bundleFiles = [];
 
-const execCmd = async (cmd) => {
+const execCmd = async cmd => {
   const args = ['-c', cmd];
   const opts = { stdio: 'inherit' };
   return runInsideContainer
@@ -28,7 +32,7 @@ const execCmd = async (cmd) => {
       execa('bash', args, opts);
 };
 
-const jqExtract = async (jqCmd) => {
+const jqExtract = async jqCmd => {
   const { stdout } = await execa('jq', ['-r', jqCmd, planFile]);
   return stdout;
 };
@@ -38,11 +42,6 @@ const setPermitAndScript = async () => {
   script = await jqExtract('.script');
   permit = await jqExtract('.permit');
 
-  if (CI) {
-    script = `/usr/src/upgrade-test-scripts/${script}`;
-    permit = `/usr/src/upgrade-test-scripts/${permit}`;
-  }
-
   if (!script || !permit) {
     throw new Error(`Error: Failed to parse required fields from ${planFile}`);
   }
@@ -50,22 +49,17 @@ const setPermitAndScript = async () => {
 
 const setBundleFiles = async () => {
   console.log('Setting bundle files from plan...');
-  const sourceKey = CI ? '.bundles[].fileName' : '.bundles[].bundleID';
-  const suffix = CI ? '' : '.json';
+  const sourceKey = '.bundles[].bundleID';
+  const suffix = '.json';
 
   const result = await jqExtract(sourceKey);
   bundleFiles = result
     .split('\n')
     .filter(Boolean)
-    .map((line) => `${line}${suffix}`);
+    .map(line => `${line}${suffix}`);
 };
 
 const copyFilesToContainer = async () => {
-  if (CI) {
-    console.log('Skipping file copy: running in CI environment');
-    return;
-  }
-
   const containerID = 'agoric';
   const targetDir = '/usr/src/';
 
@@ -87,41 +81,23 @@ const copyFilesToContainer = async () => {
 
 const installBundles = async () => {
   for (const b of bundleFiles) {
-    let cmd = CI ? `cd /usr/src/upgrade-test-scripts && ` : `cd /usr/src && `;
+    let cmd = `cd /usr/src && `;
 
     cmd += `echo 'Installing ${b}' && ls -sh '${b}' && agd tx swingset install-bundle --compress '@${b}' --from ${walletName} -bblock ${SIGN_BROADCAST_OPTS}`;
     console.log(`Executing installation for bundle ${b}`);
     await execCmd(cmd);
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-  }
-};
-
-const openVault = async () => {
-  const wantMinted = 450;
-  const giveCollateral = 90;
-  const walletAddress = 'agoric1ee9hr0jyrxhy999y755mp862ljgycmwyp4pl7q';
-
-  if (createVault && walletAddress) {
-    console.log('Creating the vault...');
-    const openCmd = `${agops} vaults open --wantMinted ${wantMinted} --giveCollateral ${giveCollateral} > /tmp/want-ist.json`;
-    await execCmd(openCmd);
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    const execOffer = `${agops} perf satisfaction --executeOffer /tmp/want-ist.json --from ${walletAddress} --keyring-backend=test`;
-    console.log('Executing the offer...');
-    await execCmd(execOffer);
-  } else {
-    console.log('Vault not created');
+    await new Promise(resolve => setTimeout(resolve, 5000));
   }
 };
 
 const acceptProposal = async () => {
   console.log(`Submitting proposal to evaluate ${script}`);
 
-  const baseDir = CI ? '/usr/src/upgrade-test-scripts' : '/usr/src';
+  const baseDir = '/usr/src';
   const submitCommand = `cd ${baseDir} && agd tx gov submit-proposal swingset-core-eval ${permit} ${script} --title='Install ${script}' --description='Evaluate ${script}' --deposit=10000000ubld --from ${walletName} ${SIGN_BROADCAST_OPTS} -o json`;
   await execCmd(submitCommand);
 
-  await new Promise((resolve) => setTimeout(resolve, 5000));
+  await new Promise(resolve => setTimeout(resolve, 5000));
 
   const queryCmd = `cd ${baseDir} && agd query gov proposals --output json | jq -c '[.proposals[] | if .proposal_id == null then .id else .proposal_id end | tonumber] | max'`;
 
@@ -162,9 +138,10 @@ const main = async () => {
     console.log('permit:', permit);
 
     await copyFilesToContainer();
-    await openVault();
     await installBundles();
-    await acceptProposal();
+    if (net === 'local') {
+      await acceptProposal();
+    }
   } catch (err) {
     console.error('Error:', err.message);
   }

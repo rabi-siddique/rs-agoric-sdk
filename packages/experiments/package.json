@@ -6,7 +6,8 @@
   "scripts": {
     "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
     "build": "agoric run src/builder.js",
-    "deploy": "yarn build && runInsideContainer=true planFile=startContract-plan.json node deploy.js"
+    "build-gmp": "bash build-gmp.sh",
+    "deploy": "yarn build-gmp && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js"
   },
   "dependencies": {
     "@agoric/deploy-script-support": "workspace:*",
