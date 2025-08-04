@@ -57,7 +57,7 @@ export const createAndMonitorLCA = async (
   { makeEvmAccountKit, chainHub, log, localTransfer, withdrawToSeat },
   seat,
 ) => {
-  void log('Inside createAndMonitorLCA');
+  trace('Inside createAndMonitorLCA');
   const [agoric, remoteChain] = await Promise.all([
     orch.getChain('agoric'),
     orch.getChain('axelar'),
@@ -67,7 +67,7 @@ export const createAndMonitorLCA = async (
   remoteDenom || Fail`${chainId} does not have stakingTokens in config`;
 
   const localAccount = await agoric.makeAccount();
-  void log('localAccount created successfully');
+  trace('localAccount created successfully');
   const localChainAddress = await localAccount.getAddress();
   trace('Local Chain Address:', localChainAddress);
 
@@ -94,11 +94,11 @@ export const createAndMonitorLCA = async (
     remoteChainInfo: info,
     nonce: 1n,
   });
-  void log('tap created successfully');
+  trace('tap created successfully');
   // XXX consider storing appRegistration, so we can .revoke() or .updateTargetApp()
   // @ts-expect-error tap.receiveUpcall: 'Vow<void> | undefined' not assignable to 'Promise<any>'
   await localAccount.monitorTransfers(evmAccountKit.tap);
-  void log('Monitoring transfers setup successfully');
+  trace('Monitoring transfers setup successfully');
 
   const { give } = seat.getProposal();
   const [[_kw, amt]] = Object.entries(give);
@@ -110,28 +110,24 @@ export const createAndMonitorLCA = async (
 
   await localTransfer(seat, localAccount, give);
 
-  // Factory contract address when using local dev environment
-  // TODO: pass it via terms?
-  const factoryContractAddress = '0xef8651dD30cF990A1e831224f2E0996023163A81';
+  const factoryContractAddress = '0xe4Bf676E956AF5f30876b9af9E93D3CCC4D2ECfF';
 
   /** @type {AxelarGmpOutgoingMemo} */
   const memo = {
-    destination_chain: 'Ethereum',
+    destination_chain: 'Avalanche',
     destination_address: factoryContractAddress,
-    // XXX: Ideally, the gas amount should be provided via offerArgs.
-    // For now, this approach ensures that the workflow at
-    // https://github.com/agoric-labs/agoric-to-axelar-local/actions/workflows/agoric-integration.yml
-    // runs successfully.
     payload: buildGasPayload(0n),
     type: AxelarGMPMessageType.ContractCall,
     fee: {
-      amount: String(amt.value), // TODO: Get fee amount from api
+      amount: amt.value,
       recipient: gmpAddresses.AXELAR_GAS,
     },
   };
 
+  trace(`Gas Amount: ${JSON.stringify(amt.value)}`);
+
   try {
-    void log('Initiating IBC transfer');
+    trace('Initiating IBC transfer');
     await localAccount.transfer(
       {
         value: gmpAddresses.AXELAR_GMP,
@@ -145,7 +141,7 @@ export const createAndMonitorLCA = async (
       { memo: JSON.stringify(memo) },
     );
 
-    void log('Done');
+    trace('Done');
   } catch (e) {
     await withdrawToSeat(localAccount, seat, give);
     const errorMsg = `IBC Transfer failed ${q(e)}`;
