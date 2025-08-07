@@ -14,24 +14,24 @@ import { E } from '@endo/far';
  * @import {start as StartFn} from '@agoric/orchestration/src/examples/axelar-gmp.contract.js';
  */
 
-const contractName = 'axelarGmpV1';
-const trace = makeTracer(`start ${contractName}`, true);
+const trace = makeTracer('start axelarGmp', true);
 
 /**
  * @param {BootstrapPowers & {
  *   installation: {
  *     consume: {
- *       axelarGmpV1: Installation<StartFn>;
+ *       axelarGmp: Installation<StartFn>;
  *     };
  *   };
  *   instance: {
  *     produce: {
- *       axelarGmpV1: Producer<Instance<StartFn>>;
+ *       axelarGmp: Producer<Instance<StartFn>>;
  *     };
  *   };
  *   issuer: {
  *     consume: {
  *       BLD: Issuer<'nat'>;
+ *       IST: Issuer<'nat'>;
  *     };
  *   };
  * }} powers
@@ -54,13 +54,13 @@ export const startAxelarGmp = async (
       startUpgradable,
     },
     installation: {
-      consume: { axelarGmpV1 },
+      consume: { axelarGmp },
     },
     instance: {
-      produce: { [contractName]: produceInstance },
+      produce: { axelarGmp: produceInstance },
     },
     issuer: {
-      consume: { BLD },
+      consume: { BLD, IST },
     },
   },
   { options: { chainInfo, assetInfo } },
@@ -77,24 +77,41 @@ export const startAxelarGmp = async (
       localchain,
       marshaller,
       orchestrationService: cosmosInterchainService,
-      storageNode: E(NonNullish(await chainStorage)).makeChildNode(
-        contractName,
-      ),
+      storageNode: E(NonNullish(await chainStorage)).makeChildNode('axelarGmp'),
       timerService: chainTimerService,
       chainInfo,
       assetInfo,
     }),
   );
 
+  /** @param {() => Promise<Issuer>} p */
+  const safeFulfill = async p =>
+    E.when(
+      p(),
+      i => i,
+      () => undefined,
+    );
+
+  const axlIssuer = await safeFulfill(() =>
+    E(agoricNames).lookup('issuer', 'AXL'),
+  );
+
+  // const wavaxIssuer = await safeFulfill(() =>
+  //   E(agoricNames).lookup('issuer', 'WAVAX'),
+  // );
+
   const issuerKeywordRecord = harden({
     BLD: await BLD,
+    IST: await IST,
+    ...(axlIssuer && { AXL: axlIssuer }),
+    // ...(wavaxIssuer && { WAVAX: wavaxIssuer }),
   });
   trace('issuerKeywordRecord', issuerKeywordRecord);
 
   trace('Starting contract instance');
   const { instance } = await E(startUpgradable)({
-    label: contractName,
-    installation: axelarGmpV1,
+    label: 'axelarGmp',
+    installation: axelarGmp,
     issuerKeywordRecord,
     privateArgs,
   });
@@ -114,21 +131,22 @@ export const getManifest = ({ restoreRef }, { installationRef, options }) => {
           chainStorage: true,
           cosmosInterchainService: true,
           localchain: true,
+
           startUpgradable: true,
         },
         installation: {
-          consume: { [contractName]: true },
+          consume: { axelarGmp: true },
         },
         instance: {
-          produce: { [contractName]: true },
+          produce: { axelarGmp: true },
         },
         issuer: {
-          consume: { BLD: true },
+          consume: { BLD: true, IST: true },
         },
       },
     },
     installations: {
-      [contractName]: restoreRef(installationRef),
+      axelarGmp: restoreRef(installationRef),
     },
     options,
   };

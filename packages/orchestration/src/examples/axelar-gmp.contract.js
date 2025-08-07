@@ -37,9 +37,8 @@ export const contract = async (
   zone,
   { chainHub, orchestrateAll, vowTools, zoeTools },
 ) => {
-  trace('starting axelarGmp');
+  trace('Inside Contract');
 
-  trace('registering chain and assets');
   registerChainsAndAssets(
     chainHub,
     zcf.getTerms().brands,
@@ -91,7 +90,6 @@ export const contract = async (
     },
   );
 
-  trace('contract started successfully');
   return { publicFacet, creatorFacet };
 };
 harden(contract);
