@@ -37,11 +37,11 @@ export const start = async (zcf, { storageNode, marshaller }, baggage) => {
             const { vPath, vData } = offerArgs;
 
             trace(`Pushing to ${vPath}:`, vData);
-            const pathNode = E(storageNode).makeChildNode(vPath);
 
-            // Serialize and store the data
-            const serializedData = marshaller.toCapData(vData);
-            await E(pathNode).setValue(JSON.stringify(serializedData));
+            const marshalled = await E(marshaller).toCapData(vData);
+            const serialized = JSON.stringify(marshalled);
+            const pathNode = E(storageNode).makeChildNode(vPath);
+            await E(pathNode).setValue(serialized);
 
             seat.exit();
           },
@@ -52,7 +52,7 @@ export const start = async (zcf, { storageNode, marshaller }, baggage) => {
     },
   );
 
-  trace('contract started successfully - v1');
+  trace('contract started successfully - v2');
   return {
     publicFacet,
   };
