@@ -1,6 +1,6 @@
 import { E } from '@endo/far';
 
-const contractName = 'vStoragePusher';
+const contractName = 'vStoragePusherV1';
 export const startContract = async ({
   consume: { chainStorage, startUpgradable, board },
   installation: {
