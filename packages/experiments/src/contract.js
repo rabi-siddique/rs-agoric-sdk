@@ -1,16 +1,15 @@
-// @ts-check
-import { E } from '@endo/eventual-send';
-import { Far } from '@endo/far';
+import { E } from '@endo/far';
+import { prepareExo } from '@agoric/vat-data';
+import { M } from '@agoric/store';
+import { makeTracer } from '@agoric/internal';
 
-/**
- * @import {Marshaller, StorageNode} from '@agoric/internal/src/lib-chainStorage.js';
- */
+const trace = makeTracer('vstoragePusher');
 
 /**
  * @typedef {{
- *   path: string,
- *   data: any,
- * }} VStorageEntry
+ *   vPath: string,
+ *   vData: any,
+ * }} PushOfferArgs
  */
 
 /**
@@ -21,38 +20,40 @@ import { Far } from '@endo/far';
  *   storageNode: StorageNode,
  *   marshaller: Marshaller
  * }} privateArgs
+ * @param {MapStore<any, any>} baggage
  */
-export const start = async (zcf, privateArgs) => {
-  const { storageNode, marshaller } = privateArgs;
+export const start = async (zcf, { storageNode, marshaller }, baggage) => {
+  trace('contract started...');
+  const publicFacet = prepareExo(
+    baggage,
+    'vstoragePusher Public Facet',
+    M.interface('vstoragePusher PF', {
+      vPusherInvitation: M.call().returns(M.any()),
+    }),
+    {
+      vPusherInvitation() {
+        return zcf.makeInvitation(
+          async (seat, /** @type {PushOfferArgs} */ offerArgs) => {
+            const { vPath, vData } = offerArgs;
 
-  /**
-   * @typedef {{
-   *   vPath: string,
-   *   vData: any,
-   * }} PushOfferArgs
-   */
+            trace(`Pushing to ${vPath}:`, vData);
+            const pathNode = E(storageNode).makeChildNode(vPath);
 
-  const publicFacet = Far('pushToVStorage Public Facet', {
-    pushToVStorage: () => {
-      return zcf.makeInvitation(
-        async (seat, /** @type {PushOfferArgs} */ offerArgs) => {
-          const { vPath, vData } = offerArgs;
+            // Serialize and store the data
+            const serializedData = marshaller.toCapData(vData);
+            await E(pathNode).setValue(JSON.stringify(serializedData));
 
-          console.log(`[VStoragePusher] Pushing to ${vPath}:`, vData);
-          const pathNode = E(storageNode).makeChildNode(vPath);
-
-          // Serialize and store the data
-          const serializedData = marshaller.toCapData(vData);
-          await E(pathNode).setValue(JSON.stringify(serializedData));
-
-          seat.exit();
-        },
-        'pushToVStorage',
-        undefined,
-      );
+            seat.exit();
+          },
+          'push data',
+          undefined,
+        );
+      },
     },
-  });
+  );
 
-  console.log('vStoragePusherV2 started successfully');
-  return { publicFacet };
+  trace('contract started successfully - v1');
+  return {
+    publicFacet,
+  };
 };
