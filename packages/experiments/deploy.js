@@ -22,7 +22,7 @@ const CHAINID = chainIds[net];
 const RPC = rpcs[net];
 console.log({ CHAINID, RPC });
 const GAS_ADJUSTMENT = '1.2';
-const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
+const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --node=https://devnet.rpc.agoric.net:443 --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
 const walletName = 'gov1';
 
 let script = '';
