@@ -1,11 +1,12 @@
 // @ts-check
-import { Far } from '@endo/far';
 import { E } from '@endo/eventual-send';
+import { M } from '@endo/patterns';
+import { makeDurableZone } from '@agoric/zone/durable.js';
 
 const { Fail } = assert;
 
 /**
- * * @import {Marshaller, StorageNode} from '@agoric/internal/src/lib-chainStorage.js';
+ * @import {Marshaller, StorageNode} from '@agoric/internal/src/lib-chainStorage.js';
  */
 
 /**
@@ -18,14 +19,16 @@ const { Fail } = assert;
 /**
  * A basic smart contract that pushes data to vstorage paths
  *
- * @param {ZCF} _zcf
+ * @param {ZCF} zcf
  * @param {{
  *   storageNode: StorageNode,
  *   marshaller: Marshaller
  * }} privateArgs
+ * @param {import('@agoric/vat-data').Baggage} baggage
  */
-export const start = async (_zcf, privateArgs) => {
+export const start = async (zcf, privateArgs, baggage) => {
   const { storageNode, marshaller } = privateArgs;
+  const zone = makeDurableZone(baggage);
 
   storageNode || Fail`storageNode is required`;
   marshaller || Fail`marshaller is required`;
@@ -50,10 +53,33 @@ export const start = async (_zcf, privateArgs) => {
     return { success: true };
   };
 
-  const publicFacet = Far('VStoragePusher Public Facet', {
-    pushToVStorage,
-  });
+  /**
+   * @typedef {{
+   *   vPath: string,
+   *   vData: any,
+   * }} PushOfferArgs
+   */
 
-  console.log('vStoragePusher started successfully');
+  const publicFacet = zone.exo(
+    'pushToVStorage Public Facet',
+    M.interface('pushToVStorage', {
+      pushToVStorage: M.call().returns(M.any()),
+    }),
+    {
+      pushToVStorage() {
+        return zcf.makeInvitation(
+          async (seat, /** @type {PushOfferArgs} */ offerArgs) => {
+            const { vPath, vData } = offerArgs;
+            pushToVStorage(vPath, vData);
+            seat.exit();
+          },
+          'increment counter',
+          undefined,
+        );
+      },
+    },
+  );
+
+  console.log('vStoragePusherV1 started successfully');
   return { publicFacet };
 };

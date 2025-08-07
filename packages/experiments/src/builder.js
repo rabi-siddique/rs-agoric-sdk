@@ -1,7 +1,7 @@
 import { makeHelpers } from '@agoric/deploy-script-support';
 import { getManifest, startContract } from './proposal.js';
 
-const contractName = 'vStoragePusher';
+const contractName = 'vStoragePusherV1';
 /**
  * @import {CoreEvalBuilder} from '@agoric/deploy-script-support/src/externalTypes.js'
  */
