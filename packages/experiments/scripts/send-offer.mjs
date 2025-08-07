@@ -18,7 +18,7 @@ try {
     source: 'contract',
     offerArgs: {
       vPath: 'position1',
-      vData: 'hello',
+      vData: { name: 'test' },
     },
   });
 
