@@ -12,7 +12,6 @@ const { Fail } = assert;
  * @typedef {{
  *   path: string,
  *   data: any,
- *   timestamp: number
  * }} VStorageEntry
  */
 
