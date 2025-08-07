@@ -10,7 +10,7 @@ export const startContract = async ({
     produce: { [contractName]: produceInstance },
   },
 }) => {
-  const boardAux = await E(chainStorage).makeChildNode('ymax0');
+  const boardAux = await E(chainStorage).makeChildNode('vStoragePusher');
   const storageNode = await E(boardAux).makeChildNode('portfolios');
   const marshaller = await E(board).getPublishingMarshaller();
 
