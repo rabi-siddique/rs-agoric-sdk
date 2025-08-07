@@ -87,3 +87,6 @@ endo-sha.txt
 !.aiderignore
 .claude
 
+startAxelarGmp**
+eval-register-interchain-bank-assets**
+offer.json

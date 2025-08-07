@@ -1,51 +1,58 @@
 import { E } from '@endo/far';
 import { prepareExo } from '@agoric/vat-data';
 import { M } from '@agoric/store';
+import { makeTracer } from '@agoric/internal';
 
-let counter = 0;
-export const start = async (zcf, { storageNode, timerService }, baggage) => {
-  console.log('Inside the contract....');
-  await E(timerService).delay(20n);
-  console.log("loging this....")
+const trace = makeTracer('vstoragePusher');
+
+/**
+ * @typedef {{
+ *   vPath: string,
+ *   vData: any,
+ * }} PushOfferArgs
+ */
+
+/**
+ * A basic smart contract that pushes data to vstorage paths
+ *
+ * @param {ZCF} zcf
+ * @param {{
+ *   storageNode: StorageNode,
+ *   marshaller: Marshaller
+ * }} privateArgs
+ * @param {MapStore<any, any>} baggage
+ */
+export const start = async (zcf, { storageNode, marshaller }, baggage) => {
+  trace('contract started...');
   const publicFacet = prepareExo(
     baggage,
-    'Counter Public Facet',
-    M.interface('Counter PF', {
-      getCounter: M.call().returns(M.any()),
-      makeIncrementInvitation: M.call().returns(M.any()),
-      makeDecrementInvitation: M.call().returns(M.any()),
+    'vstoragePusher Public Facet',
+    M.interface('vstoragePusher PF', {
+      vPusherInvitation: M.call().returns(M.any()),
     }),
     {
-      getCounter() {
-        return counter;
-      },
-      makeIncrementInvitation() {
+      vPusherInvitation() {
         return zcf.makeInvitation(
-          async seat => {
+          async (seat, /** @type {PushOfferArgs} */ offerArgs) => {
+            const { vPath, vData } = offerArgs;
+
+            trace(`Pushing to ${vPath}:`, vData);
+
+            const marshalled = await E(marshaller).toCapData(vData);
+            const serialized = JSON.stringify(marshalled);
+            const pathNode = E(storageNode).makeChildNode(vPath);
+            await E(pathNode).setValue(serialized);
+
             seat.exit();
-            counter += 1;
-            await E(storageNode).setValue(String(counter));
-            console.log('Counter Value:', counter);
           },
-          'increment counter',
-          undefined,
-        );
-      },
-      makeDecrementInvitation() {
-        return zcf.makeInvitation(
-          async seat => {
-            seat.exit();
-            counter -= 1;
-            await E(storageNode).setValue(String(counter));
-            console.log('Counter Value:', counter);
-          },
-          'decrement counter',
+          'push data',
           undefined,
         );
       },
     },
   );
 
+  trace('contract started successfully - v2');
   return {
     publicFacet,
   };

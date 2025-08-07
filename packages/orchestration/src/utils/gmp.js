@@ -99,18 +99,31 @@ export const buildNoncePayload = nonce => {
   return Array.from(hexToBytes(abiEncodedData));
 };
 
+/**
+ * @param {bigint} gasAmount - gas amount for the EVM to Agoric message
+ * @returns {number[]} The payload array.
+ */
+export const buildGasPayload = gasAmount => {
+  const abiEncodedData = encodeAbiParameters(
+    [{ type: 'uint256' }],
+    [gasAmount],
+  );
+
+  return Array.from(hexToBytes(abiEncodedData));
+};
+
 export const networkConfigs = {
   devnet: {
     label: 'Agoric Devnet',
     url: 'https://devnet.agoric.net/network-config',
-    rpc: 'https://devnet.rpc.agoric.net',
+    rpc: 'https://devnet.rpc.agoric.net:443',
     api: 'https://devnet.api.agoric.net',
     chainId: 'agoricdev-25',
   },
   emerynet: {
     label: 'Agoric Emerynet',
     url: 'https://emerynet.agoric.net/network-config',
-    rpc: 'https://emerynet.rpc.agoric.net',
+    rpc: 'https://emerynet.rpc.agoric.net:443',
     api: 'https://emerynet.api.agoric.net',
     chainId: 'agoric-emerynet-9',
   },

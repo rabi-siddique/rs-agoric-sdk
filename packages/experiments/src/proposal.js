@@ -1,8 +1,12 @@
+import { makeTracer } from '@agoric/internal';
 import { E } from '@endo/far';
 
-const contractName = 'counter';
+const contractName = 'resolverMock';
+
+const trace = makeTracer('vPProposal');
 export const startContract = async ({
-  consume: { chainStorage, startUpgradable, chainTimerService },
+  produce,
+  consume: { chainStorage, startUpgradable, board, ...consume },
   installation: {
     consume: { [contractName]: installation },
   },
@@ -10,19 +14,34 @@ export const startContract = async ({
     produce: { [contractName]: produceInstance },
   },
 }) => {
-  const boardAux = await E(chainStorage).makeChildNode('counterData');
-  const storageNode = await E(boardAux).makeChildNode('counter');
-  await E(storageNode).setValue(String(0));
+  trace(`start ${contractName}`);
+  const boardAux = await E(chainStorage).makeChildNode('vStoragePusher');
+  const storageNode = await E(boardAux).makeChildNode('portfolios');
+  const marshaller = await E(board).getPublishingMarshaller();
 
-  const { instance } = await E(startUpgradable)({
+  const oldkit = await consume[`${contractName}Kit`];
+  await E(oldkit.adminFacet).terminateContract(
+    Error('shutting down for replacement'),
+  );
+
+  trace('starting contract...');
+  const kit = await E(startUpgradable)({
     installation,
     issuerKeywordRecord: {},
     terms: {},
-    privateArgs: { storageNode, timerService: chainTimerService },
+    privateArgs: { storageNode, marshaller },
     label: contractName,
   });
+  trace('contract started successfully');
 
-  produceInstance.resolve(instance);
+  produceInstance.reset();
+  produceInstance.resolve(kit.instance);
+
+  produce[`${contractName}Kit`].reset();
+  produce[`${contractName}Kit`].resolve(kit);
+
+  const [instanceId] = await [E(board).getId(kit.instance)];
+  trace('instanceId:', instanceId);
 };
 
 export const getManifest = ({ restoreRef }, { installKeys }) => ({
@@ -31,11 +50,14 @@ export const getManifest = ({ restoreRef }, { installKeys }) => ({
   },
   manifest: {
     [startContract.name]: {
+      produce: {
+        [`${contractName}Kit`]: true,
+      },
       consume: {
+        board: true,
         chainStorage: true,
-        contractKits: true,
         startUpgradable: true,
-        chainTimerService: true,
+        [`${contractName}Kit`]: true,
       },
       installation: {
         consume: { [contractName]: true },
