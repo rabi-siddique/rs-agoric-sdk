@@ -2,8 +2,6 @@
 import { E } from '@endo/eventual-send';
 import { Far } from '@endo/far';
 
-const { Fail } = assert;
-
 /**
  * @import {Marshaller, StorageNode} from '@agoric/internal/src/lib-chainStorage.js';
  */
@@ -27,29 +25,6 @@ const { Fail } = assert;
 export const start = async (zcf, privateArgs) => {
   const { storageNode, marshaller } = privateArgs;
 
-  storageNode || Fail`storageNode is required`;
-  marshaller || Fail`marshaller is required`;
-
-  /**
-   * @param {string} path
-   * @param {any} data
-   */
-  const pushToVStorage = async (path, data) => {
-    const entry = {
-      path,
-      data,
-    };
-
-    console.log(`[VStoragePusher] Pushing to ${path}:`, data);
-    const pathNode = E(storageNode).makeChildNode(path);
-
-    // Serialize and store the data
-    const serializedData = marshaller.toCapData(entry);
-    await E(pathNode).setValue(JSON.stringify(serializedData));
-
-    return { success: true };
-  };
-
   /**
    * @typedef {{
    *   vPath: string,
@@ -62,7 +37,14 @@ export const start = async (zcf, privateArgs) => {
       return zcf.makeInvitation(
         async (seat, /** @type {PushOfferArgs} */ offerArgs) => {
           const { vPath, vData } = offerArgs;
-          pushToVStorage(vPath, vData);
+
+          console.log(`[VStoragePusher] Pushing to ${vPath}:`, vData);
+          const pathNode = E(storageNode).makeChildNode(vPath);
+
+          // Serialize and store the data
+          const serializedData = marshaller.toCapData(vData);
+          await E(pathNode).setValue(JSON.stringify(serializedData));
+
           seat.exit();
         },
         'pushToVStorage',
@@ -71,6 +53,6 @@ export const start = async (zcf, privateArgs) => {
     },
   });
 
-  console.log('vStoragePusherV1 started successfully');
+  console.log('vStoragePusherV2 started successfully');
   return { publicFacet };
 };
