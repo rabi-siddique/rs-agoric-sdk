@@ -11,8 +11,8 @@ const { log, error } = console;
 try {
   log('Preparing offer...');
   const offer = await prepareOffer({
-    publicInvitationMaker: 'pushToVStorage',
-    instanceName: 'vStoragePusherV1',
+    publicInvitationMaker: 'vPusherInvitation',
+    instanceName: 'resolverMock',
     brandName: 'BLD',
     amount: 20_000_000n,
     source: 'contract',
