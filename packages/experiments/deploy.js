@@ -10,13 +10,19 @@ const chainIds = {
   devnet: 'agoricdev-25',
 };
 
+const rpcs = {
+  local: 'http://localhost:26656/',
+  devnet: 'https://devnet.rpc.agoric.net:443',
+};
+
 const net = process.env.net;
 const runInsideContainer = process.env.runInsideContainer == 'true';
 
 const CHAINID = chainIds[net];
-console.log('CHAINID', CHAINID);
+const RPC = rpcs[net];
+console.log({ CHAINID, RPC });
 const GAS_ADJUSTMENT = '1.2';
-const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --node=https://devnet.rpc.agoric.net:443 --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
+const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
 const walletName = 'gov1';
 
 let script = '';
