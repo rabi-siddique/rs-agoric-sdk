@@ -1,8 +1,8 @@
 import { E } from '@endo/far';
 
-const contractName = 'counter';
+const contractName = 'vStoragePusher';
 export const startContract = async ({
-  consume: { chainStorage, startUpgradable, chainTimerService },
+  consume: { chainStorage, startUpgradable, board },
   installation: {
     consume: { [contractName]: installation },
   },
@@ -10,15 +10,15 @@ export const startContract = async ({
     produce: { [contractName]: produceInstance },
   },
 }) => {
-  const boardAux = await E(chainStorage).makeChildNode('counterData');
-  const storageNode = await E(boardAux).makeChildNode('counter');
-  await E(storageNode).setValue(String(0));
+  const boardAux = await E(chainStorage).makeChildNode('ymax0');
+  const storageNode = await E(boardAux).makeChildNode('portfolios');
+  const marshaller = await E(board).getPublishingMarshaller();
 
   const { instance } = await E(startUpgradable)({
     installation,
     issuerKeywordRecord: {},
     terms: {},
-    privateArgs: { storageNode, timerService: chainTimerService },
+    privateArgs: { storageNode, marshaller },
     label: contractName,
   });
 
@@ -32,10 +32,9 @@ export const getManifest = ({ restoreRef }, { installKeys }) => ({
   manifest: {
     [startContract.name]: {
       consume: {
+        board: true,
         chainStorage: true,
-        contractKits: true,
         startUpgradable: true,
-        chainTimerService: true,
       },
       installation: {
         consume: { [contractName]: true },

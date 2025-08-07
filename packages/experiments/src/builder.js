@@ -1,6 +1,7 @@
 import { makeHelpers } from '@agoric/deploy-script-support';
 import { getManifest, startContract } from './proposal.js';
 
+const contractName = 'vStoragePusher';
 /**
  * @import {CoreEvalBuilder} from '@agoric/deploy-script-support/src/externalTypes.js'
  */
@@ -13,7 +14,7 @@ export const defaultProposalBuilder = async ({ publishRef, install }) => {
       getManifest.name,
       {
         installKeys: {
-          counter: publishRef(install('./contract.js')),
+          [contractName]: publishRef(install('./contract.js')),
         },
       },
     ],
@@ -22,7 +23,5 @@ export const defaultProposalBuilder = async ({ publishRef, install }) => {
 
 export default async (homeP, endowments) => {
   const { writeCoreEval } = await makeHelpers(homeP, endowments);
-  await writeCoreEval(startContract.name, (opts) =>
-    defaultProposalBuilder(opts)
-  );
+  await writeCoreEval(startContract.name, opts => defaultProposalBuilder(opts));
 };
