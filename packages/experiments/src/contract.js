@@ -1,52 +1,59 @@
-import { E } from '@endo/far';
-import { prepareExo } from '@agoric/vat-data';
-import { M } from '@agoric/store';
+// @ts-check
+import { Far } from '@endo/far';
+import { E } from '@endo/eventual-send';
 
-let counter = 0;
-export const start = async (zcf, { storageNode, timerService }, baggage) => {
-  console.log('Inside the contract....');
-  await E(timerService).delay(20n);
-  console.log("loging this....")
-  const publicFacet = prepareExo(
-    baggage,
-    'Counter Public Facet',
-    M.interface('Counter PF', {
-      getCounter: M.call().returns(M.any()),
-      makeIncrementInvitation: M.call().returns(M.any()),
-      makeDecrementInvitation: M.call().returns(M.any()),
-    }),
-    {
-      getCounter() {
-        return counter;
-      },
-      makeIncrementInvitation() {
-        return zcf.makeInvitation(
-          async seat => {
-            seat.exit();
-            counter += 1;
-            await E(storageNode).setValue(String(counter));
-            console.log('Counter Value:', counter);
-          },
-          'increment counter',
-          undefined,
-        );
-      },
-      makeDecrementInvitation() {
-        return zcf.makeInvitation(
-          async seat => {
-            seat.exit();
-            counter -= 1;
-            await E(storageNode).setValue(String(counter));
-            console.log('Counter Value:', counter);
-          },
-          'decrement counter',
-          undefined,
-        );
-      },
-    },
-  );
+const { Fail } = assert;
 
-  return {
-    publicFacet,
+/**
+ * * @import {Marshaller, StorageNode} from '@agoric/internal/src/lib-chainStorage.js';
+ */
+
+/**
+ * @typedef {{
+ *   path: string,
+ *   data: any,
+ *   timestamp: number
+ * }} VStorageEntry
+ */
+
+/**
+ * A basic smart contract that pushes data to vstorage paths
+ *
+ * @param {ZCF} _zcf
+ * @param {{
+ *   storageNode: StorageNode,
+ *   marshaller: Marshaller
+ * }} privateArgs
+ */
+export const start = async (_zcf, privateArgs) => {
+  const { storageNode, marshaller } = privateArgs;
+
+  storageNode || Fail`storageNode is required`;
+  marshaller || Fail`marshaller is required`;
+
+  /**
+   * @param {string} path
+   * @param {any} data
+   */
+  const pushToVStorage = async (path, data) => {
+    const entry = {
+      path,
+      data,
+    };
+
+    console.log(`[VStoragePusher] Pushing to ${path}:`, data);
+    const pathNode = E(storageNode).makeChildNode(path);
+
+    // Serialize and store the data
+    const serializedData = marshaller.toCapData(entry);
+    await E(pathNode).setValue(JSON.stringify(serializedData));
+
+    return { success: true };
   };
+
+  const publicFacet = Far('VStoragePusher Public Facet', {
+    pushToVStorage,
+  });
+
+  return { publicFacet };
 };
