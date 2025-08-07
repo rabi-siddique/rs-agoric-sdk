@@ -1,7 +1,6 @@
 // @ts-check
 import { E } from '@endo/eventual-send';
-import { M } from '@endo/patterns';
-import { makeDurableZone } from '@agoric/zone/durable.js';
+import { Far } from '@endo/far';
 
 const { Fail } = assert;
 
@@ -24,11 +23,9 @@ const { Fail } = assert;
  *   storageNode: StorageNode,
  *   marshaller: Marshaller
  * }} privateArgs
- * @param {import('@agoric/vat-data').Baggage} baggage
  */
-export const start = async (zcf, privateArgs, baggage) => {
+export const start = async (zcf, privateArgs) => {
   const { storageNode, marshaller } = privateArgs;
-  const zone = makeDurableZone(baggage);
 
   storageNode || Fail`storageNode is required`;
   marshaller || Fail`marshaller is required`;
@@ -60,25 +57,19 @@ export const start = async (zcf, privateArgs, baggage) => {
    * }} PushOfferArgs
    */
 
-  const publicFacet = zone.exo(
-    'pushToVStorage Public Facet',
-    M.interface('pushToVStorage', {
-      pushToVStorage: M.call().returns(M.any()),
-    }),
-    {
-      pushToVStorage() {
-        return zcf.makeInvitation(
-          async (seat, /** @type {PushOfferArgs} */ offerArgs) => {
-            const { vPath, vData } = offerArgs;
-            pushToVStorage(vPath, vData);
-            seat.exit();
-          },
-          'increment counter',
-          undefined,
-        );
-      },
+  const publicFacet = Far('pushToVStorage Public Facet', {
+    pushToVStorage: () => {
+      return zcf.makeInvitation(
+        async (seat, /** @type {PushOfferArgs} */ offerArgs) => {
+          const { vPath, vData } = offerArgs;
+          pushToVStorage(vPath, vData);
+          seat.exit();
+        },
+        'pushToVStorage',
+        undefined,
+      );
     },
-  );
+  });
 
   console.log('vStoragePusherV1 started successfully');
   return { publicFacet };
