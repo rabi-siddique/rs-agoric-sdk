@@ -6,25 +6,25 @@ const contractName = 'resolverMock';
 const trace = makeTracer('vPProposal');
 export const startContract = async ({
   produce,
-  consume: { chainStorage, startUpgradable, board },
+  consume: { chainStorage, startUpgradable, board, ...consume },
   installation: {
-    consume: { [contractName]: installation, [`${contractName}Kit`]: kitP },
+    consume: { [contractName]: installation },
   },
   instance: {
     produce: { [contractName]: produceInstance },
   },
 }) => {
+  trace(`start ${contractName}`);
   const boardAux = await E(chainStorage).makeChildNode('vStoragePusher');
   const storageNode = await E(boardAux).makeChildNode('portfolios');
   const marshaller = await E(board).getPublishingMarshaller();
 
-  // if (true) {
-  //   const kit = await kitP;
-  //   await E(kit.adminFacet).terminateContract(
-  //     Error('shutting down for replacement'),
-  //   );
-  // }
+  const oldkit = await consume[`${contractName}Kit`];
+  await E(oldkit.adminFacet).terminateContract(
+    Error('shutting down for replacement'),
+  );
 
+  trace('starting contract...');
   const kit = await E(startUpgradable)({
     installation,
     issuerKeywordRecord: {},
@@ -32,6 +32,7 @@ export const startContract = async ({
     privateArgs: { storageNode, marshaller },
     label: contractName,
   });
+  trace('contract started successfully');
 
   produceInstance.reset();
   produceInstance.resolve(kit.instance);
