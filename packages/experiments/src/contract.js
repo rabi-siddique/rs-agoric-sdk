@@ -55,5 +55,6 @@ export const start = async (_zcf, privateArgs) => {
     pushToVStorage,
   });
 
+  console.log('vStoragePusher started successfully');
   return { publicFacet };
 };
