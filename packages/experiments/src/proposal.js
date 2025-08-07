@@ -1,10 +1,14 @@
+import { makeTracer } from '@agoric/internal';
 import { E } from '@endo/far';
 
-const contractName = 'vStoragePusherV2';
+const contractName = 'resolverMock';
+
+const trace = makeTracer('vPProposal');
 export const startContract = async ({
+  produce,
   consume: { chainStorage, startUpgradable, board },
   installation: {
-    consume: { [contractName]: installation },
+    consume: { [contractName]: installation, [`${contractName}Kit`]: kitP },
   },
   instance: {
     produce: { [contractName]: produceInstance },
@@ -14,7 +18,14 @@ export const startContract = async ({
   const storageNode = await E(boardAux).makeChildNode('portfolios');
   const marshaller = await E(board).getPublishingMarshaller();
 
-  const { instance } = await E(startUpgradable)({
+  // if (true) {
+  //   const kit = await kitP;
+  //   await E(kit.adminFacet).terminateContract(
+  //     Error('shutting down for replacement'),
+  //   );
+  // }
+
+  const kit = await E(startUpgradable)({
     installation,
     issuerKeywordRecord: {},
     terms: {},
@@ -22,7 +33,14 @@ export const startContract = async ({
     label: contractName,
   });
 
-  produceInstance.resolve(instance);
+  produceInstance.reset();
+  produceInstance.resolve(kit.instance);
+
+  produce[`${contractName}Kit`].reset();
+  produce[`${contractName}Kit`].resolve(kit);
+
+  const [instanceId] = await [E(board).getId(kit.instance)];
+  trace('instanceId:', instanceId);
 };
 
 export const getManifest = ({ restoreRef }, { installKeys }) => ({
@@ -31,10 +49,14 @@ export const getManifest = ({ restoreRef }, { installKeys }) => ({
   },
   manifest: {
     [startContract.name]: {
+      produce: {
+        [`${contractName}Kit`]: true,
+      },
       consume: {
         board: true,
         chainStorage: true,
         startUpgradable: true,
+        [`${contractName}Kit`]: true,
       },
       installation: {
         consume: { [contractName]: true },
