@@ -126,50 +126,48 @@ export const prepareEvmAccountKit = (
           /** @type {AxelarGmpIncomingMemo} */
           const memo = JSON.parse(tx.memo);
 
-          if (memo.source_chain === 'Ethereum') {
-            const payloadBytes = decodeBase64(memo.payload);
-            const [{ isContractCallResult, data }] = decodeAbiParameters(
-              [
-                {
-                  type: 'tuple',
-                  components: [
-                    { name: 'isContractCallResult', type: 'bool' },
-                    {
-                      name: 'data',
-                      type: 'tuple[]',
-                      components: [
-                        { name: 'success', type: 'bool' },
-                        { name: 'result', type: 'bytes' },
-                      ],
-                    },
-                  ],
-                },
-              ],
-              payloadBytes,
-            );
+          const payloadBytes = decodeBase64(memo.payload);
+          const [{ isContractCallResult, data }] = decodeAbiParameters(
+            [
+              {
+                type: 'tuple',
+                components: [
+                  { name: 'isContractCallResult', type: 'bool' },
+                  {
+                    name: 'data',
+                    type: 'tuple[]',
+                    components: [
+                      { name: 'success', type: 'bool' },
+                      { name: 'result', type: 'bytes' },
+                    ],
+                  },
+                ],
+              },
+            ],
+            payloadBytes,
+          );
 
-            trace(
-              'receiveUpcall Decoded:',
-              JSON.stringify({ isContractCallResult, data }),
-            );
+          trace(
+            'receiveUpcall Decoded:',
+            JSON.stringify({ isContractCallResult, data }),
+          );
 
-            if (this.state.evmAccountAddress) {
-              trace('Setting latestMessage:', data);
-              this.state.latestMessage = harden([...data]);
-            } else {
-              const [message] = data;
-              const { success, result } = message;
+          if (this.state.evmAccountAddress) {
+            trace('Setting latestMessage:', data);
+            this.state.latestMessage = harden([...data]);
+          } else {
+            const [message] = data;
+            const { success, result } = message;
 
-              trace('Contract Call Status:', success);
+            trace('Contract Call Status:', success);
 
-              if (success) {
-                const [address] = decodeAbiParameters(
-                  [{ type: 'address' }],
-                  result,
-                );
-                this.state.evmAccountAddress = address;
-                trace('evmAccountAddress:', this.state.evmAccountAddress);
-              }
+            if (success) {
+              const [address] = decodeAbiParameters(
+                [{ type: 'address' }],
+                result,
+              );
+              this.state.evmAccountAddress = address;
+              trace('evmAccountAddress:', this.state.evmAccountAddress);
             }
           }
 
