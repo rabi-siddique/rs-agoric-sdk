@@ -23,7 +23,7 @@ try {
     log('Preparing offer...');
     const offer = await prepareOffer({
       publicInvitationMaker: 'createAndMonitorLCA',
-      instanceName: 'axelarGmpV1',
+      instanceName: 'axelarGmpV2',
       brandName: 'BLD',
       amount: 20_000_000n,
       source: 'contract',
