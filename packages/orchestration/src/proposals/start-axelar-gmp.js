@@ -14,19 +14,19 @@ import { E } from '@endo/far';
  * @import {start as StartFn} from '@agoric/orchestration/src/examples/axelar-gmp.contract.js';
  */
 
-const contractName = 'axelarGmpV1';
+const contractName = 'axelarGmpV2';
 const trace = makeTracer(`start ${contractName}`, true);
 
 /**
  * @param {BootstrapPowers & {
  *   installation: {
  *     consume: {
- *       axelarGmpV1: Installation<StartFn>;
+ *       axelarGmpV2: Installation<StartFn>;
  *     };
  *   };
  *   instance: {
  *     produce: {
- *       axelarGmpV1: Producer<Instance<StartFn>>;
+ *       axelarGmpV2: Producer<Instance<StartFn>>;
  *     };
  *   };
  *   issuer: {
@@ -54,7 +54,7 @@ export const startAxelarGmp = async (
       startUpgradable,
     },
     installation: {
-      consume: { axelarGmpV1 },
+      consume: { axelarGmpV2 },
     },
     instance: {
       produce: { [contractName]: produceInstance },
@@ -94,7 +94,7 @@ export const startAxelarGmp = async (
   trace('Starting contract instance');
   const { instance } = await E(startUpgradable)({
     label: contractName,
-    installation: axelarGmpV1,
+    installation: axelarGmpV2,
     issuerKeywordRecord,
     privateArgs,
   });
