@@ -22,14 +22,21 @@
  */
 import type { Amount, Brand, NatAmount, NatValue } from '@agoric/ertp';
 import type { TypedPattern } from '@agoric/internal';
-import { AnyNatAmountShape, type AccountId } from '@agoric/orchestration';
+import {
+  AnyNatAmountShape,
+  type AccountId,
+  type Bech32Address,
+} from '@agoric/orchestration';
 import type {
   ContinuingInvitationSpec,
   ContractInvitationSpec,
 } from '@agoric/smart-wallet/src/invitations.js';
 import { Fail } from '@endo/errors';
 import { M } from '@endo/patterns';
-import { AxelarChain, YieldProtocol } from './constants.js';
+import {
+  AxelarChain,
+  YieldProtocol,
+} from '@agoric/portfolio-api/src/constants.js';
 import type { EVMContractAddresses, start } from './portfolio.contract.js';
 import type { PortfolioKit } from './portfolio.exo.js';
 
@@ -193,7 +200,9 @@ export const TargetAllocationShapeExt: TypedPattern<Record<string, NatValue>> =
  * @param id - Portfolio ID number
  * @returns Path segments for vstorage
  */
-export const makePortfolioPath = (id: number) => [`portfolio${id}`];
+export const makePortfolioPath = (id: number): [`portfolio${number}`] => [
+  `portfolio${id}`,
+];
 
 /**
  * Extracts portfolio ID from a vstorage path.
@@ -221,13 +230,20 @@ type FlowStatus = {
   error?: string;
 };
 
+/** ChainNames including those in future upgrades */
+type ChainNameExt = string;
+const ChainNameExtShape: TypedPattern<ChainNameExt> = M.string();
+
 // XXX relate paths to types a la readPublished()
 export type StatusFor = {
+  portfolios: {
+    addPortfolio: `portfolio${number}`;
+  };
   portfolio: {
     positionKeys: PoolKeyExt[];
     flowCount: number;
-    // XXX: accountIdByChain: Record<ChainAccountKey, AccountId>;
-    accountIdByChain: Record<string, AccountId>;
+    accountIdByChain: Record<ChainNameExt, AccountId>;
+    depositAddress?: Bech32Address;
     targetAllocation?: TargetAllocation;
   };
   position: {
@@ -248,11 +264,14 @@ export const PortfolioStatusShapeExt: TypedPattern<StatusFor['portfolio']> =
       positionKeys: M.arrayOf(PoolKeyShapeExt),
       flowCount: M.number(),
       accountIdByChain: M.recordOf(
-        M.or('agoric', 'noble'), // ChainAccountKey
-        M.string(), // AccountId
+        ChainNameExtShape,
+        M.string(), // XXX no runtime validation of AccountId
       ),
     },
-    { targetAllocation: TargetAllocationShapeExt },
+    {
+      depositAddress: M.string(), // XXX no runtime validation of Bech32Address
+      targetAllocation: TargetAllocationShapeExt,
+    },
   );
 
 /**

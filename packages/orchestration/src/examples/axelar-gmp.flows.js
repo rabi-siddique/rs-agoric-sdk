@@ -116,10 +116,14 @@ export const createAndMonitorLCA = async (
   const memo = {
     destination_chain: 'Avalanche',
     destination_address: factoryContractAddress,
+    // XXX: Ideally, the gas amount should be provided via offerArgs.
+    // For now, this approach ensures that the workflow at
+    // https://github.com/agoric-labs/agoric-to-axelar-local/actions/workflows/agoric-integration.yml
+    // runs successfully.
     payload: buildGasPayload(0n),
     type: AxelarGMPMessageType.ContractCall,
     fee: {
-      amount: String(amt.value),
+      amount: String(amt.value), // TODO: Get fee amount from api
       recipient: gmpAddresses.AXELAR_GAS,
     },
   };

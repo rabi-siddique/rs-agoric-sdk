@@ -20,6 +20,7 @@ import {
   OrchestrationPowersShape,
   registerChainsAndAssets,
   withOrchestration,
+  type Bech32Address,
   type ChainInfo,
   type Denom,
   type DenomDetail,
@@ -32,7 +33,10 @@ import type { Zone } from '@agoric/zone';
 import { E } from '@endo/far';
 import type { CopyRecord } from '@endo/pass-style';
 import { M } from '@endo/patterns';
-import { AxelarChain, YieldProtocol } from './constants.js';
+import {
+  AxelarChain,
+  YieldProtocol,
+} from '@agoric/portfolio-api/src/constants.js';
 import { preparePortfolioKit, type PortfolioKit } from './portfolio.exo.ts';
 import * as flows from './portfolio.flows.ts';
 import { makeOfferArgsShapes } from './type-guards-steps.ts';
@@ -112,6 +116,16 @@ const AxelarIdShape: TypedPattern<AxelarId> = M.splitRecord(
   fromEntries(keys(AxelarChain).map(chain => [chain, AxelarIdsPattern])),
 );
 
+export type GmpAddresses = {
+  AXELAR_GMP: Bech32Address;
+  AXELAR_GAS: Bech32Address;
+};
+
+const GmpAddressesShape: TypedPattern<GmpAddresses> = M.splitRecord({
+  AXELAR_GMP: M.string(),
+  AXELAR_GAS: M.string(),
+});
+
 type PortfolioPrivateArgs = OrchestrationPowers & {
   // XXX document required assets, chains
   assetInfo: [Denom, DenomDetail & { brandKey?: string }][];
@@ -120,6 +134,7 @@ type PortfolioPrivateArgs = OrchestrationPowers & {
   storageNode: Remote<StorageNode>;
   axelarIds: AxelarId;
   contracts: EVMContractAddressesMap;
+  gmpAddresses: GmpAddresses;
 };
 
 const privateArgsShape: TypedPattern<PortfolioPrivateArgs> = {
@@ -133,6 +148,7 @@ const privateArgsShape: TypedPattern<PortfolioPrivateArgs> = {
   assetInfo: M.arrayOf([M.string(), DenomDetailShape]),
   axelarIds: AxelarIdShape,
   contracts: EVMContractAddressesMap,
+  gmpAddresses: GmpAddressesShape,
 };
 
 export const meta: ContractMeta = {
@@ -178,6 +194,7 @@ export const contract = async (
     timerService,
     marshaller,
     storageNode,
+    gmpAddresses,
   } = privateArgs;
   const { brands } = zcf.getTerms();
   const { orchestrateAll, zoeTools, chainHub, vowTools } = tools;
@@ -188,10 +205,15 @@ export const contract = async (
   if (!('axelar' in chainInfo)) {
     trace('⚠️ no axelar chainInfo; GMP not available', Object.keys(chainInfo));
   }
-  // TODO: only on 1st incarnation
-  registerChainsAndAssets(chainHub, brands, chainInfo, assetInfo, {
-    log: trace,
-  });
+
+  // Only register chains and assets if chainHub is empty to avoid conflicts on restart
+  if (chainHub.isEmpty()) {
+    registerChainsAndAssets(chainHub, brands, chainInfo, assetInfo, {
+      log: trace,
+    });
+  } else {
+    trace('chainHub already populated, using existing entries');
+  }
 
   const proposalShapes = makeProposalShapes(
     brands.USDC,
@@ -228,6 +250,7 @@ export const contract = async (
     },
     axelarIds,
     contracts,
+    gmpAddresses,
   };
 
   // Create rebalance flow first - needed by preparePortfolioKit
@@ -272,8 +295,6 @@ export const contract = async (
       inertSubscriber,
     },
   );
-
-  trace('XXX NEEDSTEST: baggage test');
 
   const publicFacet = zone.exo('PortfolioPub', interfaceTODO, {
     /**

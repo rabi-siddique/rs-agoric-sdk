@@ -3,7 +3,10 @@
 import { test } from '@agoric/zoe/tools/prepare-test-env-ava.js';
 
 import * as contractExports from '@aglocal/portfolio-contract/src/portfolio.contract.ts';
-import { makeUSDNIBCTraffic } from '@aglocal/portfolio-contract/test/mocks.js';
+import {
+  gmpAddresses,
+  makeUSDNIBCTraffic,
+} from '@aglocal/portfolio-contract/test/mocks.js';
 import { setupPortfolioTest } from '@aglocal/portfolio-contract/test/supports.ts';
 import { makeTrader } from '@aglocal/portfolio-contract/tools/portfolio-actors.ts';
 import { makeWallet } from '@aglocal/portfolio-contract/tools/wallet-offer-tools.ts';
@@ -13,11 +16,14 @@ import {
 } from '@agoric/internal/src/storage-test-utils.js';
 import { makePromiseSpace } from '@agoric/vats';
 import { makeWellKnownSpaces } from '@agoric/vats/src/core/utils.js';
-import type { Instance, ZoeService } from '@agoric/zoe';
+import type { Instance, Invitation, ZoeService } from '@agoric/zoe';
 import { setUpZoeForTest } from '@agoric/zoe/tools/setup-zoe.js';
-import { E, passStyleOf } from '@endo/far';
+import { E, Far, passStyleOf } from '@endo/far';
+import { makePromiseKit, type PromiseKit } from '@endo/promise-kit';
 import { axelarConfig } from '../src/axelar-configs.js';
+import type { ChainInfoPowers } from '../src/chain-info.core.js';
 import { toExternalConfig } from '../src/config-marshal.js';
+import type { ContractControl } from '../src/contract-control.js';
 import {
   portfolioDeployConfigShape,
   startPortfolio,
@@ -28,7 +34,10 @@ import type {
   StartFn,
 } from '../src/portfolio-start.type.ts';
 import { name as contractName } from '../src/portfolio.contract.permit.js';
-import type { ChainInfoPowers } from '../src/chain-info.core.js';
+import { delegatePortfolioContract } from '../src/portfolio-control.core.js';
+import * as postalServiceExports from '../src/postal-service.contract.js';
+import { deployPostalService } from '../src/postal-service.core.js';
+import { produceAttenuatedDeposit } from '../src/attenuated-deposit.core.js';
 
 const { entries, keys } = Object;
 
@@ -42,9 +51,9 @@ const docOpts = {
   showValue: defaultSerializer.parse,
 };
 
-test('coreEval code without swingset', async t => {
+const makeBootstrap = async t => {
   const common = await setupPortfolioTest(t);
-  const { bootstrap, utils } = common;
+  const { bootstrap } = common;
   const { agoricNamesAdmin } = bootstrap;
   const wk = await makeWellKnownSpaces(agoricNamesAdmin);
   const log = () => {}; // console.log
@@ -98,6 +107,13 @@ test('coreEval code without swingset', async t => {
   }
 
   produce.chainInfoPublished.resolve(true);
+  return { common, powers, zoe, bundleAndInstall };
+};
+
+test('coreEval code without swingset', async t => {
+  const { common, powers, zoe, bundleAndInstall } = await makeBootstrap(t);
+  const { bootstrap, utils } = common;
+  const { usdc, bld, poc26 } = common.brands;
 
   // script from agoric run does this step
   t.log('produce installation using test bundle');
@@ -106,7 +122,7 @@ test('coreEval code without swingset', async t => {
   );
 
   const options = toExternalConfig(
-    harden({ axelarConfig } as PortfolioDeployConfig),
+    harden({ axelarConfig, gmpAddresses } as PortfolioDeployConfig),
     {},
     portfolioDeployConfigShape,
   );
@@ -169,4 +185,83 @@ test('coreEval code without swingset', async t => {
 
   const { storage } = common.bootstrap;
   await documentStorageSchema(t, storage, docOpts);
+});
+
+test('delegate ymax control', async t => {
+  const { common, powers, zoe, bundleAndInstall } = await makeBootstrap(t);
+  const { rootZone } = common.utils;
+
+  t.log('produce getDepositFacet');
+  await produceAttenuatedDeposit(powers as any);
+
+  // script from agoric run does this step
+  const pContractName = 'postalService';
+  {
+    t.log('produce postalService installation using test bundle');
+    const postalInstall = await bundleAndInstall(postalServiceExports);
+    powers.installation.produce[pContractName].resolve(postalInstall);
+    const { agoricNamesAdmin } = common.bootstrap;
+    await E(E(agoricNamesAdmin).lookupAdmin('installation')).update(
+      pContractName,
+      postalInstall,
+    );
+  }
+
+  console.log('awaited namesByAddress');
+  await deployPostalService(powers as any);
+  t.log('deployPostalService done');
+  const { agoricNames } = common.bootstrap;
+  const pInst = await E(agoricNames).lookup('instance', pContractName);
+  t.is(passStyleOf(pInst), 'remotable');
+  const pPub = await E(zoe).getPublicFacet(pInst);
+  t.is(passStyleOf(pPub), 'remotable');
+
+  const addr = 'agoric1ymaxcontrol';
+  const { namesByAddressAdmin } = common.bootstrap;
+  const ctrlKit: PromiseKit<ContractControl<StartFn>> = makePromiseKit();
+  namesByAddressAdmin.update(
+    addr,
+    Far('ymax control nameHub', {
+      lookup: key => {
+        t.is(key, 'depositFacet');
+        return Far('DF', {
+          receive: async (pmt: Invitation<ContractControl<StartFn>>) => {
+            const seat = E(zoe).offer(pmt);
+            const prize = await E(seat).getOfferResult();
+            t.log('prize', prize);
+            t.is(passStyleOf(prize), 'remotable');
+            // XXX fragile: relies on getting the control prize before creatorFacet
+            ctrlKit.resolve(prize);
+          },
+        });
+      },
+    }),
+  );
+
+  const zone = rootZone.subZone('bootstrap vat');
+  powers.produce.ymax0Kit.resolve({
+    creatorFacet: Far('mockCreator'),
+    adminFacet: Far('mockAdmin'),
+    instance: Far('mockInstance'),
+  } as any);
+  await delegatePortfolioContract(
+    // @ts-expect-error mock
+    { ...powers, zone },
+    { options: { ymaxControlAddress: addr } },
+  );
+  const ctrl = await ctrlKit.promise;
+
+  // eslint-disable-next-line no-underscore-dangle
+  t.deepEqual(await E(ctrl as any).__getMethodNames__(), [
+    '__getInterfaceGuard__',
+    '__getMethodNames__',
+    'getCreatorFacet',
+    'getPublicFacet',
+    'install',
+    'installAndStart',
+    'pruneChainStorage',
+    'start',
+    'terminate',
+    'upgrade',
+  ]);
 });
