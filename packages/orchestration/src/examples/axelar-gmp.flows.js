@@ -76,7 +76,7 @@ export const createNfa = async (orch, { localTransfer }, seat) => {
   const memo = {
     noble: {
       forwarding: {
-        recipient: lcaAddr,
+        recipient: lcaAddr.value,
       },
     },
   };
