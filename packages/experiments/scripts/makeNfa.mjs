@@ -18,9 +18,10 @@ try {
   log('--- Creating NFA ---');
 
   log('Preparing offer...');
+  // worked with v2: https://www.mintscan.io/noble-testnet/tx/557963B572E3C8B4CF9870EE7279B487468D783A4D8B28E7DCB86944A20F1BBC?sector=logs
   const offer = await prepareOffer({
     publicInvitationMaker: 'createNfa',
-    instanceName: 'createNfaV1',
+    instanceName: 'createNfaV2',
     brandName: 'BLD',
     amount: 20_000_000n,
     source: 'contract',
