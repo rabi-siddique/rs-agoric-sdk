@@ -82,10 +82,10 @@ export const createNfa = async (orch, { localTransfer }, seat) => {
   };
 
   const [[_kw, amt]] = Object.entries(give);
-  trace(`calling transfer with amt: ${amt}`);
+  trace(`calling transfer with amt: ${amt} .... addr: ${icaAddr.value}`);
   await lca.transfer(
     {
-      value: 'noble1n4j0cy98dac5q6d9y5nhlmk5d6e4wzve0gznrw',
+      value: icaAddr.value,
       encoding: 'bech32',
       chainId: nobleId,
     },
