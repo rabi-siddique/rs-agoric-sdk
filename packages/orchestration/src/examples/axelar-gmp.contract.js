@@ -1,14 +1,12 @@
 import { makeTracer } from '@agoric/internal';
-import { E } from '@endo/far';
 import { M } from '@endo/patterns';
 import { prepareChainHubAdmin } from '../exos/chain-hub-admin.js';
 import { registerChainsAndAssets } from '../utils/chain-hub-helper.js';
 import { withOrchestration } from '../utils/start-helper.js';
-import { prepareEvmAccountKit } from './axelar-gmp-account-kit.js';
 import * as evmFlows from './axelar-gmp.flows.js';
 
 /**
- * @import {Remote, Vow} from '@agoric/vow';
+ * @import {Remote} from '@agoric/vow';
  * @import {Zone} from '@agoric/zone';
  * @import {OrchestrationPowers, OrchestrationTools} from '../utils/start-helper.js';
  * @import {CosmosChainInfo, Denom, DenomDetail} from '@agoric/orchestration';
@@ -16,7 +14,7 @@ import * as evmFlows from './axelar-gmp.flows.js';
  * @import {ZCF} from '@agoric/zoe';
  */
 
-const trace = makeTracer('AxelarGmp');
+const trace = makeTracer('createNfa');
 
 /**
  * Orchestration contract to be wrapped by withOrchestration for Zoe
@@ -35,9 +33,9 @@ export const contract = async (
   zcf,
   privateArgs,
   zone,
-  { chainHub, orchestrateAll, vowTools, zoeTools },
+  { chainHub, orchestrateAll, zoeTools },
 ) => {
-  trace('starting axelarGmp');
+  trace('starting nfa contract');
 
   trace('registering chain and assets');
   registerChainsAndAssets(
@@ -49,42 +47,26 @@ export const contract = async (
 
   const creatorFacet = prepareChainHubAdmin(zone, chainHub);
 
-  // UNTIL https://github.com/Agoric/agoric-sdk/issues/9066
-  const logNode = E(privateArgs.storageNode).makeChildNode('log');
-  /** @type {(msg: string) => Vow<void>} */
-  const log = msg => vowTools.watch(E(logNode).setValue(msg));
-
-  const makeEvmAccountKit = prepareEvmAccountKit(zone.subZone('evmTap'), {
-    zcf,
-    vowTools,
-    log,
-    zoeTools,
-  });
-
-  const { localTransfer, withdrawToSeat } = zoeTools;
-  const { createAndMonitorLCA } = orchestrateAll(evmFlows, {
-    makeEvmAccountKit,
-    log,
-    chainHub,
+  const { localTransfer } = zoeTools;
+  const { createNfa } = orchestrateAll(evmFlows, {
     localTransfer,
-    withdrawToSeat,
   });
 
   const publicFacet = zone.exo(
     'Send PF',
     M.interface('Send PF', {
-      createAndMonitorLCA: M.callWhen().returns(M.any()),
+      createNfa: M.callWhen().returns(M.any()),
     }),
     {
-      createAndMonitorLCA() {
+      createNfa() {
         return zcf.makeInvitation(
           /**
            * @param {ZCFSeat} seat
            */
           seat => {
-            return createAndMonitorLCA(seat);
+            return createNfa(seat);
           },
-          'makeAccount',
+          'makeNfa',
           undefined,
         );
       },
