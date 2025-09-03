@@ -12,8 +12,8 @@ cd .. || exit 1
 # Run the Axelar GMP deployment script
 agoric run builders/scripts/orchestration/axelar-gmp.build.js \
   --net=devnet \
-  --peer=noble:connection-13:channel-11:uusdc || exit 1
-  
+  --peer=noble:connection-13:channel-11:uusdc \
+  --peer=axelar:connection-19:channel-315:uaxl || exit 1
 
 # Copy plan file to destination
 cp /home/rabi/Desktop/Agoric/rs-agoric-sdk/packages/startAxelarGmp-plan.json \
