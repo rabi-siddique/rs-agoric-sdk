@@ -47,54 +47,14 @@ const trace = makeTracer('EvmFlow');
  * }} ctx
  * @param {ZCFSeat} seat
  */
-export const createNfa = async (orch, { localTransfer }, seat) => {
-  trace('inside createNfa');
-  const [agoric, noble] = await Promise.all([
-    orch.getChain('agoric'),
-    orch.getChain('noble'),
-  ]);
+export const createlca = async (orch, { localTransfer }, seat) => {
+  trace('inside createlca');
+  const agoric = await orch.getChain('agoric');
 
   // create lca
   const lca = await agoric.makeAccount();
   const lcaAddr = await lca.getAddress();
-  trace(`lca addr: ${lcaAddr}`);
-
-  // create ica
-  const ica = await noble.makeAccount();
-  const icaAddr = await ica.getAddress();
-  trace(`ica addr: ${icaAddr}`);
-
-  // transfer fund to lca
-  const { give } = seat.getProposal();
-  await localTransfer(seat, lca, give);
-  trace(`localTransfer success`);
-
-  // register NFA
-  const { chainId: nobleId } = await noble.getChainInfo();
-  trace(`noble chainId ${nobleId}`);
-
-  const memo = {
-    noble: {
-      forwarding: {
-        recipient: lcaAddr.value,
-      },
-    },
-  };
-
-  const [[_kw, amt]] = Object.entries(give);
-  trace(`calling transfer with amt: ${amt} .... addr: ${icaAddr.value}`);
-  await lca.transfer(
-    {
-      value: icaAddr.value,
-      encoding: 'bech32',
-      chainId: nobleId,
-    },
-    {
-      denom: 'ubld',
-      value: amt.value,
-    },
-    { memo: JSON.stringify(memo) },
-  );
+  trace(`lca addr: ${lcaAddr.value}`);
   trace(`done`);
 };
-harden(createNfa);
+harden(createlca);

@@ -35,7 +35,7 @@ export const contract = async (
   zone,
   { chainHub, orchestrateAll, zoeTools },
 ) => {
-  trace('starting nfa contract');
+  trace('starting lca contract');
 
   trace('registering chain and assets');
   registerChainsAndAssets(
@@ -48,25 +48,25 @@ export const contract = async (
   const creatorFacet = prepareChainHubAdmin(zone, chainHub);
 
   const { localTransfer } = zoeTools;
-  const { createNfa } = orchestrateAll(evmFlows, {
+  const { createlca } = orchestrateAll(evmFlows, {
     localTransfer,
   });
 
   const publicFacet = zone.exo(
     'Send PF',
     M.interface('Send PF', {
-      createNfa: M.callWhen().returns(M.any()),
+      createlca: M.callWhen().returns(M.any()),
     }),
     {
-      createNfa() {
+      createlca() {
         return zcf.makeInvitation(
           /**
            * @param {ZCFSeat} seat
            */
           seat => {
-            return createNfa(seat);
+            return createlca(seat);
           },
-          'makeNfa',
+          'createlca',
           undefined,
         );
       },
