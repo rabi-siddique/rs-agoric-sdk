@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 // @ts-check
 import './lockdown.mjs';
-import {
-  fetchFromVStorage,
-  poll,
-  prepareOffer,
-  processWalletOffer,
-  validateEvmAddress,
-} from './utils.mjs';
+import { prepareOffer, processWalletOffer } from './utils.mjs';
 
 const OFFER_FILE = 'offer.json';
 const CONTAINER_PATH = `/usr/src/${OFFER_FILE}`;
@@ -23,7 +17,6 @@ try {
   const offer = await prepareOffer({
     publicInvitationMaker: 'createlca',
     instanceName: 'createlcaV1',
-    brandName: 'BLD',
     source: 'contract',
   });
 
