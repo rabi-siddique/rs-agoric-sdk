@@ -56,5 +56,6 @@ export const createlca = async (orch, { localTransfer }, seat) => {
   const lcaAddr = await lca.getAddress();
   trace(`lca addr: ${lcaAddr.value}`);
   trace(`done`);
+  seat.exit();
 };
 harden(createlca);
