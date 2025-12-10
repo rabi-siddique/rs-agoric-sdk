@@ -47,15 +47,41 @@ const trace = makeTracer('EvmFlow');
  * }} ctx
  * @param {ZCFSeat} seat
  */
-export const createlca = async (orch, { localTransfer }, seat) => {
+export const createlca = async (
+  orch,
+  { makeEvmAccountKit, chainHub },
+  seat,
+) => {
   trace('inside createlca');
-  const agoric = await orch.getChain('agoric');
+
+  const [agoric, remoteChain] = await Promise.all([
+    orch.getChain('agoric'),
+    orch.getChain('axelar'),
+  ]);
+  const { chainId } = await remoteChain.getChainInfo();
 
   // create lca
   const lca = await agoric.makeAccount();
   const lcaAddr = await lca.getAddress();
   trace(`lca addr: ${lcaAddr.value}`);
   trace(`done`);
+
+  const agoricChainId = (await agoric.getChainInfo()).chainId;
+  const { transferChannel } = await chainHub.getConnectionInfo(
+    agoricChainId,
+    chainId,
+  );
+
+  const evmAccountKit = makeEvmAccountKit({
+    localAccount: lca,
+    localChainAddress: lcaAddr,
+    sourceChannel: transferChannel.counterPartyChannelId,
+  });
+
+  // @ts-expect-error
+  await lca.monitorTransfers(evmAccountKit.tap);
+  trace('Monitoring transfers setup successfully');
+
   seat.exit();
 };
 harden(createlca);
