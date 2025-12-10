@@ -12,7 +12,7 @@
     "register:axl": "bash register-axl.sh && runInsideContainer=true net=devnet planFile=eval-register-interchain-bank-assets-plan.json node deploy.js",
     "make-acc": "makeAccount=true node scripts/make-account.mjs",
     "make-off": "node scripts/send-offer.mjs",
-    "make-nfa": "node scripts/makeNfa.mjs"
+    "make-lca": "node scripts/makeLca.mjs"
   },
   "dependencies": {
     "@agoric/cosmic-proto": "^0.5.0-u21.0",
