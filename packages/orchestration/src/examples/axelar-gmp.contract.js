@@ -4,6 +4,7 @@ import { prepareChainHubAdmin } from '../exos/chain-hub-admin.js';
 import { registerChainsAndAssets } from '../utils/chain-hub-helper.js';
 import { withOrchestration } from '../utils/start-helper.js';
 import * as evmFlows from './axelar-gmp.flows.js';
+import { prepareEvmAccountKit } from './axelar-gmp-account-kit.js';
 
 /**
  * @import {Remote} from '@agoric/vow';
@@ -33,9 +34,9 @@ export const contract = async (
   zcf,
   privateArgs,
   zone,
-  { chainHub, orchestrateAll, zoeTools },
+  { chainHub, orchestrateAll, zoeTools, vowTools },
 ) => {
-  trace('starting lca contract');
+  trace('starting createlcaWithTap contract');
 
   trace('registering chain and assets');
   registerChainsAndAssets(
@@ -47,9 +48,17 @@ export const contract = async (
 
   const creatorFacet = prepareChainHubAdmin(zone, chainHub);
 
+  const makeEvmAccountKit = prepareEvmAccountKit(zone.subZone('evmTap'), {
+    zcf,
+    vowTools,
+    zoeTools,
+  });
+
   const { localTransfer } = zoeTools;
   const { createlca } = orchestrateAll(evmFlows, {
     localTransfer,
+    makeEvmAccountKit,
+    chainHub,
   });
 
   const publicFacet = zone.exo(

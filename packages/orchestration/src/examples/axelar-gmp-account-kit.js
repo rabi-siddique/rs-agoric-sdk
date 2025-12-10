@@ -16,10 +16,8 @@
 
 import { M, mustMatch } from '@endo/patterns';
 import { VowShape } from '@agoric/vow';
-import { makeTracer, NonNullish } from '@agoric/internal';
-import { atob, decodeBase64 } from '@endo/base64';
+import { makeTracer } from '@agoric/internal';
 import { Fail } from '@endo/errors';
-import { decodeAbiParameters } from '../vendor/viem/viem-abi.js';
 import { CosmosChainAddressShape } from '../typeGuards.js';
 import { gmpAddresses, buildGMPPayload } from '../utils/gmp.js';
 
@@ -49,11 +47,7 @@ harden(InvitationMakerI);
 const EvmKitStateShape = {
   localChainAddress: CosmosChainAddressShape,
   sourceChannel: M.string(),
-  localDenom: M.string(),
   localAccount: M.remotable('LocalAccount'),
-  assets: M.any(),
-  remoteChainInfo: M.any(),
-  nonce: M.bigint(),
 };
 harden(EvmKitStateShape);
 
@@ -62,14 +56,10 @@ harden(EvmKitStateShape);
  * @param {{
  *   zcf: ZCF;
  *   vowTools: VowTools;
- *   log: (msg: string) => Vow<void>;
  *   zoeTools: ZoeTools;
  * }} powers
  */
-export const prepareEvmAccountKit = (
-  zone,
-  { zcf, vowTools, log, zoeTools },
-) => {
+export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
   return zone.exoClassKit(
     'EvmTapKit',
     {
@@ -119,79 +109,12 @@ export const prepareEvmAccountKit = (
          */
         receiveUpcall(event) {
           trace('receiveUpcall', event);
-
-          const tx = /** @type {FungibleTokenPacketData} */ (
-            JSON.parse(atob(event.packet.data))
-          );
-
-          trace('receiveUpcall packet data', tx);
-          /** @type {AxelarGmpIncomingMemo} */
-          const memo = JSON.parse(tx.memo);
-
-          if (memo.source_chain === 'Ethereum') {
-            const payloadBytes = decodeBase64(memo.payload);
-            const [{ isContractCallResult, data }] = decodeAbiParameters(
-              [
-                {
-                  type: 'tuple',
-                  components: [
-                    { name: 'isContractCallResult', type: 'bool' },
-                    {
-                      name: 'data',
-                      type: 'tuple[]',
-                      components: [
-                        { name: 'success', type: 'bool' },
-                        { name: 'result', type: 'bytes' },
-                      ],
-                    },
-                  ],
-                },
-              ],
-              payloadBytes,
-            );
-
-            trace(
-              'receiveUpcall Decoded:',
-              JSON.stringify({ isContractCallResult, data }),
-            );
-
-            if (this.state.evmAccountAddress) {
-              trace('Setting latestMessage:', data);
-              this.state.latestMessage = harden([...data]);
-            } else {
-              const [message] = data;
-              const { success, result } = message;
-
-              trace('Contract Call Status:', success);
-
-              if (success) {
-                const [address] = decodeAbiParameters(
-                  [{ type: 'address' }],
-                  result,
-                );
-                this.state.evmAccountAddress = address;
-                trace('evmAccountAddress:', this.state.evmAccountAddress);
-              }
-            }
-          }
-
           trace('receiveUpcall completed');
         },
       },
       holder: {
-        getNonce() {
-          const currentNonce = this.state.nonce;
-          this.state.nonce = currentNonce + 1n;
-          return currentNonce;
-        },
         getLocalAddress() {
           return this.state.localAccount.getAddress().value;
-        },
-        async getRemoteAddress() {
-          return this.state.evmAccountAddress;
-        },
-        async getLatestMessage() {
-          return JSON.stringify(this.state.latestMessage);
         },
         /**
          * Sends tokens from the local account to a specified Cosmos chain
@@ -217,7 +140,7 @@ export const prepareEvmAccountKit = (
          * }} offerArgs
          */
         async sendGmp(seat, offerArgs) {
-          void log('Inside sendGmp');
+          trace('Inside sendGmp');
           const {
             destinationAddress,
             type,
@@ -257,16 +180,9 @@ export const prepareEvmAccountKit = (
           const payload =
             type === 3 ? null : buildGMPPayload(contractInvocationData);
 
-          void log(`Payload: ${JSON.stringify(payload)}`);
-
-          const { denom } = NonNullish(
-            this.state.assets.find(a => a.brand === amt.brand),
-            `${amt.brand} not registered in vbank`,
-          );
+          trace(`Payload: ${JSON.stringify(payload)}`);
 
           trace('amt and brand', amt.brand);
-
-          const { chainId } = this.state.remoteChainInfo;
 
           /** @type {AxelarGmpOutgoingMemo} */
           const memo = {
@@ -281,29 +197,26 @@ export const prepareEvmAccountKit = (
               amount: String(gasAmount),
               recipient: gmpAddresses.AXELAR_GAS,
             };
-            void log(`Fee object ${JSON.stringify(memo.fee)}`);
+            void trace(`Fee object ${JSON.stringify(memo.fee)}`);
             trace(`Fee object ${JSON.stringify(memo.fee)}`);
           }
-
-          void log(`Initiating IBC Transfer...`);
-          void log(`DENOM of token:${denom}`);
 
           trace('Initiating IBC Transfer...');
           await this.state.localAccount.transfer(
             {
               value: gmpAddresses.AXELAR_GMP,
               encoding: 'bech32',
-              chainId,
+              chainId: 'axelar-dojo-1',
             },
             {
-              denom,
+              denom: 'ubld',
               value: amt.value,
             },
             { memo: JSON.stringify(memo) },
           );
 
           seat.exit();
-          void log('sendGmp successful');
+          void trace('sendGmp successful');
           return 'sendGmp successful';
         },
         /**
@@ -329,20 +242,6 @@ export const prepareEvmAccountKit = (
               }
               case 'getLocalAddress': {
                 const vow = holder.getLocalAddress();
-                return vowTools.when(vow, res => {
-                  seat.exit();
-                  return res;
-                });
-              }
-              case 'getRemoteAddress': {
-                const vow = holder.getRemoteAddress();
-                return vowTools.when(vow, res => {
-                  seat.exit();
-                  return res;
-                });
-              }
-              case 'getLatestMessage': {
-                const vow = holder.getLatestMessage();
                 return vowTools.when(vow, res => {
                   seat.exit();
                   return res;
