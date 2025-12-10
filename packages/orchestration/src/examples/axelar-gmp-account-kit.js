@@ -25,13 +25,7 @@ const trace = makeTracer('EvmAccountKit');
 const { entries } = Object;
 
 const EVMI = M.interface('holder', {
-  getNonce: M.call().returns(M.bigint()),
   getLocalAddress: M.call().returns(M.any()),
-  getRemoteAddress: M.call().returns(M.any()),
-  // TODO: This is currently a placeholder.
-  // Replace with a proper message tracking mechanism that can correlate
-  // incoming messages with outgoing `sendGmp` calls, possibly using vows/promises.
-  getLatestMessage: M.call().returns(M.any()),
   send: M.call(M.any(), M.any()).returns(M.any()),
   sendGmp: M.call(M.any(), M.any()).returns(M.any()),
   fundLCA: M.call(M.any(), M.any()).returns(VowShape),
