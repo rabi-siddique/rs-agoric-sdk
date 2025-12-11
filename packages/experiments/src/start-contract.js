@@ -5,7 +5,7 @@ import { contractName } from './name.js';
 const trace = makeTracer('proposal');
 export const startContract = async ({
   produce,
-  consume: { startUpgradable, board, ...consume },
+  consume: { startUpgradable, board },
   installation: {
     consume: { [contractName]: installation },
   },
@@ -14,11 +14,6 @@ export const startContract = async ({
   },
 }) => {
   trace(`start ${contractName}`);
-
-  const oldkit = await consume[`${contractName}Kit`];
-  await E(oldkit.adminFacet).terminateContract(
-    Error('shutting down for replacement'),
-  );
 
   trace('starting contract...');
   const kit = await E(startUpgradable)({
@@ -35,9 +30,7 @@ export const startContract = async ({
 
   produce[`${contractName}Kit`].reset();
   produce[`${contractName}Kit`].resolve(kit);
-
-  const [instanceId] = await [E(board).getId(kit.instance)];
-  trace('instanceId:', instanceId);
+  trace('kit resolved');
 };
 
 export const getManifest = ({ restoreRef }, { installKeys }) => ({
@@ -52,7 +45,6 @@ export const getManifest = ({ restoreRef }, { installKeys }) => ({
       consume: {
         board: true,
         startUpgradable: true,
-        [`${contractName}Kit`]: true,
       },
       installation: {
         consume: { [contractName]: true },

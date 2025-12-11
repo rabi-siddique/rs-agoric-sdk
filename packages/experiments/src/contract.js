@@ -5,17 +5,21 @@ import { contractName } from './name.js';
 
 const trace = makeTracer('counter');
 
+export const meta = { upgradability: 'canUpgrade' };
+
 /**
  * A simple counter contract that increments a counter and logs its value
  *
  * @param {ZCF} zcf
- * @param {{}} privateArgs
+ * @param {{}} _privateArgs
  * @param {MapStore<any, any>} baggage
  */
-export const start = async (zcf, privateArgs, baggage) => {
+export const start = async (zcf, _privateArgs, baggage) => {
   trace(`${contractName} contract started...`);
 
-  let counter = 0;
+  if (!baggage.has('counter')) {
+    baggage.init('counter', 0);
+  }
 
   const publicFacet = prepareExo(
     baggage,
@@ -27,8 +31,10 @@ export const start = async (zcf, privateArgs, baggage) => {
       incrementInvitation() {
         return zcf.makeInvitation(
           async seat => {
-            counter += 1;
-            trace(`Counter incremented to: ${counter}`);
+            const currentValue = baggage.get('counter');
+            const newValue = currentValue + 1;
+            baggage.set('counter', newValue);
+            trace(`Counter incremented to: ${newValue}`);
             seat.exit();
           },
           'increment counter',
