@@ -1,7 +1,6 @@
 import { makeHelpers } from '@agoric/deploy-script-support';
 import { getManifest, startContract } from './proposal.js';
-
-const contractName = 'resolverMock';
+import { contractName } from './name.js';
 /**
  * @import {CoreEvalBuilder} from '@agoric/deploy-script-support/src/externalTypes.js'
  */
