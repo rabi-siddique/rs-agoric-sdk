@@ -83,5 +83,6 @@ export const createlca = async (
   trace('Monitoring transfers setup successfully');
 
   seat.exit();
+  return harden({ invitationMakers: accountKit.invitationMakers });
 };
 harden(createlca);
