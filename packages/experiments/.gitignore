@@ -8,3 +8,6 @@ dist
 startContract-permit.json
 startContract-plan.json
 startContract.js
+
+upgradeContract-**
+upgradeContract.js
