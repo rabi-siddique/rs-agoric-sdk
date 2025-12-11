@@ -53,6 +53,10 @@ harden(AxelarGMPMessageType);
  * @property {OrchestrationAccount<{ chainId: 'agoric' }>} localAccount
  * @property {CosmosChainAddress} localChainAddress
  * @property {IBCChannelID} sourceChannel
+ * @property {Denom} localDenom
+ * @property {any} assets
+ * @property {any} remoteChainInfo
+ * @property {bigint} nonce
  */
 
 /**

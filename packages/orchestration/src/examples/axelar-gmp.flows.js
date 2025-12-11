@@ -9,8 +9,11 @@
  *   orchestration package.
  */
 
-import { makeTracer } from '@agoric/internal';
-import { gmpAddresses, buildGMPPayload } from '../utils/gmp.js';
+import { makeTracer, NonNullish } from '@agoric/internal';
+import { Fail, makeError, q } from '@endo/errors';
+import { AxelarGMPMessageType } from '../axelar-types.js';
+import { denomHash } from '../utils/denomHash.js';
+import { buildGasPayload, gmpAddresses } from '../utils/gmp.js';
 
 /**
  * @import {GuestInterface, GuestOf} from '@agoric/async-flow';
@@ -20,6 +23,7 @@ import { gmpAddresses, buildGMPPayload } from '../utils/gmp.js';
  * @import {Vow} from '@agoric/vow';
  * @import {ZCFSeat, AmountKeywordRecord} from '@agoric/zoe';
  * @import {LocalAccountMethods} from '@agoric/orchestration';
+ * @import {AxelarGmpOutgoingMemo} from '../axelar-types.js'
  */
 
 const trace = makeTracer('EvmFlow');
@@ -48,49 +52,110 @@ const trace = makeTracer('EvmFlow');
  * }} ctx
  * @param {ZCFSeat} seat
  */
-export const createlcaAndGmp = async (
+export const createAndMonitorLCA = async (
   orch,
-  { makeEvmAccountKit, chainHub },
+  { makeEvmAccountKit, chainHub, log, localTransfer, withdrawToSeat },
   seat,
 ) => {
-  trace('inside createlcaAndGmp');
-
+  void log('Inside createAndMonitorLCA');
   const [agoric, remoteChain] = await Promise.all([
     orch.getChain('agoric'),
     orch.getChain('axelar'),
   ]);
-  const { chainId } = await remoteChain.getChainInfo();
+  const { chainId, stakingTokens } = await remoteChain.getChainInfo();
+  const remoteDenom = stakingTokens[0].denom;
+  remoteDenom || Fail`${chainId} does not have stakingTokens in config`;
 
-  // create lca
-  const lca = await agoric.makeAccount();
-  const lcaAddr = await lca.getAddress();
-  trace(`lca addr: ${lcaAddr.value}`);
-  trace(`done`);
+  const localAccount = await agoric.makeAccount();
+  void log('localAccount created successfully');
+  const localChainAddress = await localAccount.getAddress();
+  trace('Local Chain Address:', localChainAddress);
 
   const agoricChainId = (await agoric.getChainInfo()).chainId;
   const { transferChannel } = await chainHub.getConnectionInfo(
     agoricChainId,
     chainId,
   );
+  assert(transferChannel.counterPartyChannelId, 'unable to find sourceChannel');
 
+  const localDenom = `ibc/${denomHash({
+    denom: remoteDenom,
+    channelId: transferChannel.channelId,
+  })}`;
+
+  const assets = await agoric.getVBankAssetInfo();
+  const info = await remoteChain.getChainInfo();
   const evmAccountKit = makeEvmAccountKit({
-    localAccount: lca,
-    localChainAddress: lcaAddr,
+    localAccount,
+    localChainAddress,
     sourceChannel: transferChannel.counterPartyChannelId,
+    localDenom,
+    assets,
+    remoteChainInfo: info,
+    nonce: 1n,
   });
+  void log('tap created successfully');
+  // XXX consider storing appRegistration, so we can .revoke() or .updateTargetApp()
+  // @ts-expect-error tap.receiveUpcall: 'Vow<void> | undefined' not assignable to 'Promise<any>'
+  await localAccount.monitorTransfers(evmAccountKit.tap);
+  void log('Monitoring transfers setup successfully');
 
   const { give } = seat.getProposal();
-  await evmAccountKit.holder.fundLCA(seat, give);
+  const [[_kw, amt]] = Object.entries(give);
 
-  await evmAccountKit.holder.sendGmp(seat, {
-    destinationAddress: '0x2B3545638859C49df84660eA2D110f82F2e80De8',
-    type: 1,
-    destinationEVMChain: 'Avalanche',
-    gasAmount: 15_000_000,
-    contractInvocationData: [],
-  });
+  const { denom } = NonNullish(
+    assets.find(a => a.brand === amt.brand),
+    `${amt.brand} not registered in vbank`,
+  );
 
-  // Note: seat.exit() is called inside sendGmp, so no need to exit here
+  await localTransfer(seat, localAccount, give);
+
+  // Factory contract address when using local dev environment
+  // TODO: pass it via terms?
+  const factoryContractAddress = '0xef8651dD30cF990A1e831224f2E0996023163A81';
+
+  /** @type {AxelarGmpOutgoingMemo} */
+  const memo = {
+    destination_chain: 'Ethereum',
+    destination_address: factoryContractAddress,
+    // XXX: Ideally, the gas amount should be provided via offerArgs.
+    // For now, this approach ensures that the workflow at
+    // https://github.com/agoric-labs/agoric-to-axelar-local/actions/workflows/agoric-integration.yml
+    // runs successfully.
+    payload: buildGasPayload(0n),
+    type: AxelarGMPMessageType.ContractCall,
+    fee: {
+      amount: String(amt.value), // TODO: Get fee amount from api
+      recipient: gmpAddresses.AXELAR_GAS,
+    },
+  };
+
+  try {
+    void log('Initiating IBC transfer');
+    await localAccount.transfer(
+      {
+        value: gmpAddresses.AXELAR_GMP,
+        encoding: 'bech32',
+        chainId,
+      },
+      {
+        denom,
+        value: amt.value,
+      },
+      { memo: JSON.stringify(memo) },
+    );
+
+    void log('Done');
+  } catch (e) {
+    await withdrawToSeat(localAccount, seat, give);
+    const errorMsg = `IBC Transfer failed ${q(e)}`;
+    seat.exit(errorMsg);
+    throw makeError(errorMsg);
+  }
+
+  seat.exit();
+  // TODO: When used from the portfolio contract, expose the `holder` facet directly
+  // to bypass Zoe and walletFactory, since smart wallet constraints don't apply there.
   return harden({ invitationMakers: evmAccountKit.invitationMakers });
 };
-harden(createlcaAndGmp);
+harden(createAndMonitorLCA);
