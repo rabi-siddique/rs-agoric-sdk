@@ -16,7 +16,7 @@ try {
   // worked with v3: https://www.mintscan.io/noble-testnet/tx/048F40AB94E3A3580FD149FC88ABF9F0E5A8D30836E6650BB81058E6E3289450?sector=logs
   const offer = await prepareOffer({
     publicInvitationMaker: 'createlca',
-    instanceName: 'createlcaWithTap',
+    instanceName: 'createlcaWithTapV1',
     source: 'contract',
   });
 
