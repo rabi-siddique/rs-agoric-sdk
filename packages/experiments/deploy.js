@@ -1,6 +1,7 @@
 // @ts-check
 import { execa } from 'execa';
 import fs from 'fs';
+import { contractName } from './src/name';
 
 const planFile = process.env.planFile;
 if (!planFile) throw new Error('PLAN_FILE environment variable is required.');
@@ -15,7 +16,7 @@ const rpcs = {
   devnet: 'https://devnet.rpc.agoric.net:443',
 };
 
-const net = process.env.net;
+const net = process.env.net || 'devnet';
 const runInsideContainer = process.env.runInsideContainer == 'true';
 
 const CHAINID = chainIds[net];
@@ -24,6 +25,11 @@ console.log({ CHAINID, RPC });
 const GAS_ADJUSTMENT = '1.2';
 const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --node=https://devnet.rpc.agoric.net:443 --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
 const walletName = 'gov1';
+
+const proposalTitle =
+  process.env.proposalTitle || `Deploying ${contractName} Contract`;
+const proposalDescription =
+  process.env.proposalDescription || `Moving ${contractName} to latest version`;
 
 let script = '';
 let permit = '';
@@ -101,7 +107,7 @@ const submitProposal = async () => {
   console.log(`Submitting proposal to evaluate ${script}`);
 
   const baseDir = '/usr/src';
-  const submitCommand = `cd ${baseDir} && agd tx gov submit-proposal swingset-core-eval ${permit} ${script} --title='Install ${script}' --description='Evaluate ${script}' --deposit=10000000ubld --from ${walletName} ${SIGN_BROADCAST_OPTS} -o json`;
+  const submitCommand = `cd ${baseDir} && agd tx gov submit-proposal swingset-core-eval ${permit} ${script} --title='${proposalTitle}' --description='${proposalDescription}' --deposit=10000000ubld --from ${walletName} ${SIGN_BROADCAST_OPTS} -o json`;
   await execCmd(submitCommand);
 };
 

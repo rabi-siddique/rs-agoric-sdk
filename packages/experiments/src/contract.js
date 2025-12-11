@@ -1,6 +1,7 @@
 import { prepareExo } from '@agoric/vat-data';
 import { M } from '@agoric/store';
 import { makeTracer } from '@agoric/internal';
+import { contractName } from './name';
 
 const trace = makeTracer('counter');
 
@@ -12,7 +13,7 @@ const trace = makeTracer('counter');
  * @param {MapStore<any, any>} baggage
  */
 export const start = async (zcf, privateArgs, baggage) => {
-  trace('counter contract started...');
+  trace(`${contractName} contract started...`);
 
   let counter = 0;
 
