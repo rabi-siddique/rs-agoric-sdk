@@ -27,7 +27,7 @@ const { entries } = Object;
 const EVMI = M.interface('holder', {
   getLocalAddress: M.call().returns(M.any()),
   send: M.call(M.any(), M.any()).returns(M.any()),
-  sendGmp: M.call(M.any(), M.any()).returns(M.any()),
+  sendGmp: M.call(M.any(), M.any()).returns(VowShape),
   fundLCA: M.call(M.any(), M.any()).returns(VowShape),
 });
 harden(EVMI);
@@ -109,7 +109,7 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
          *   contractInvocationData: ContractCall[];
          * }} offerArgs
          */
-        async sendGmp(seat, offerArgs) {
+        sendGmp(seat, offerArgs) {
           trace('Inside sendGmp');
           const {
             destinationAddress,
@@ -158,7 +158,7 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
           }
 
           trace('Initiating IBC Transfer...');
-          await this.state.localAccount.transfer(
+          const transferVow = this.state.localAccount.transfer(
             {
               value: gmpAddresses.AXELAR_GMP,
               encoding: 'bech32',
@@ -171,9 +171,11 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
             { memo: JSON.stringify(memo) },
           );
 
-          seat.exit();
-          trace('sendGmp successful');
-          return 'sendGmp successful';
+          return vowTools.when(transferVow, () => {
+            seat.exit();
+            trace('sendGmp successful');
+            return 'sendGmp successful';
+          });
         },
         /**
          * @param {ZCFSeat} seat
@@ -194,7 +196,8 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
               case 'sendGmp': {
                 const { give } = seat.getProposal();
                 await vowTools.when(holder.fundLCA(seat, give));
-                return holder.sendGmp(seat, args[0]);
+                const vow = holder.sendGmp(seat, args[0]);
+                return vowTools.when(vow);
               }
               case 'getLocalAddress': {
                 const vow = holder.getLocalAddress();
