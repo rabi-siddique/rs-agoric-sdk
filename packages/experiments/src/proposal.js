@@ -1,12 +1,12 @@
 import { makeTracer } from '@agoric/internal';
 import { E } from '@endo/far';
 
-const contractName = 'resolverMock';
+const contractName = 'counter';
 
-const trace = makeTracer('vPProposal');
+const trace = makeTracer('proposal');
 export const startContract = async ({
   produce,
-  consume: { chainStorage, startUpgradable, board, ...consume },
+  consume: { startUpgradable, board, ...consume },
   installation: {
     consume: { [contractName]: installation },
   },
@@ -15,9 +15,6 @@ export const startContract = async ({
   },
 }) => {
   trace(`start ${contractName}`);
-  const boardAux = await E(chainStorage).makeChildNode('vStoragePusher');
-  const storageNode = await E(boardAux).makeChildNode('portfolios');
-  const marshaller = await E(board).getPublishingMarshaller();
 
   const oldkit = await consume[`${contractName}Kit`];
   await E(oldkit.adminFacet).terminateContract(
@@ -29,7 +26,7 @@ export const startContract = async ({
     installation,
     issuerKeywordRecord: {},
     terms: {},
-    privateArgs: { storageNode, marshaller },
+    privateArgs: {},
     label: contractName,
   });
   trace('contract started successfully');
@@ -55,7 +52,6 @@ export const getManifest = ({ restoreRef }, { installKeys }) => ({
       },
       consume: {
         board: true,
-        chainStorage: true,
         startUpgradable: true,
         [`${contractName}Kit`]: true,
       },
