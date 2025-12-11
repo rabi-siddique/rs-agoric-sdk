@@ -27,7 +27,7 @@ const { entries } = Object;
 const EVMI = M.interface('holder', {
   getLocalAddress: M.call().returns(M.any()),
   send: M.call(M.any(), M.any()).returns(M.any()),
-  sendGmp: M.call(M.any(), M.any()).returns(M.any()),
+  sendGmp: M.call(M.any(), M.any()).returns(VowShape),
   fundLCA: M.call(M.any(), M.any()).returns(VowShape),
 });
 harden(EVMI);
@@ -109,7 +109,7 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
          *   contractInvocationData: ContractCall[];
          * }} offerArgs
          */
-        async sendGmp(seat, offerArgs) {
+        sendGmp(seat, offerArgs) {
           trace('Inside sendGmp');
           const {
             destinationAddress,
@@ -158,22 +158,24 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
           }
 
           trace('Initiating IBC Transfer...');
-          await this.state.localAccount.transfer(
-            {
-              value: gmpAddresses.AXELAR_GMP,
-              encoding: 'bech32',
-              chainId: 'axelar-testnet-lisbon-3',
-            },
-            {
-              denom: 'ubld',
-              value: BigInt(gasAmount),
-            },
-            { memo: JSON.stringify(memo) },
-          );
+          return vowTools.asVow(async () => {
+            await this.state.localAccount.transfer(
+              {
+                value: gmpAddresses.AXELAR_GMP,
+                encoding: 'bech32',
+                chainId: 'axelar-testnet-lisbon-3',
+              },
+              {
+                denom: 'ubld',
+                value: BigInt(gasAmount),
+              },
+              { memo: JSON.stringify(memo) },
+            );
 
-          seat.exit();
-          trace('sendGmp successful');
-          return 'sendGmp successful';
+            seat.exit();
+            trace('sendGmp successful');
+            return 'sendGmp successful';
+          });
         },
         /**
          * @param {ZCFSeat} seat
