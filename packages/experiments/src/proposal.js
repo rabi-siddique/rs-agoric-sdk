@@ -1,6 +1,6 @@
 import { makeTracer } from '@agoric/internal';
 import { E } from '@endo/far';
-import { contractName } from './name';
+import { contractName } from './name.js';
 
 const trace = makeTracer('proposal');
 export const startContract = async ({

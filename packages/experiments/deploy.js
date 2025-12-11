@@ -1,7 +1,7 @@
 // @ts-check
 import { execa } from 'execa';
 import fs from 'fs';
-import { contractName } from './src/name';
+import { contractName } from './src/name.js';
 
 const planFile = process.env.planFile;
 if (!planFile) throw new Error('PLAN_FILE environment variable is required.');

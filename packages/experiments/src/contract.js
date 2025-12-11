@@ -1,7 +1,7 @@
 import { prepareExo } from '@agoric/vat-data';
 import { M } from '@agoric/store';
 import { makeTracer } from '@agoric/internal';
-import { contractName } from './name';
+import { contractName } from './name.js';
 
 const trace = makeTracer('counter');
 
