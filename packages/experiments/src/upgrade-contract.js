@@ -4,33 +4,36 @@ import { contractName } from './name.js';
 
 const trace = makeTracer('upgrade');
 
-export const upgradeContract = async ({
-  installation: {
-    consume: { [contractName]: installation },
-  },
-  consume,
-}) => {
+export const upgradeContract = async (
+  { consume },
+  { options: { contractRef } },
+) => {
   trace(`upgrading ${contractName}`);
+
+  assert(contractRef.bundleID, 'bundleID is required');
+  trace('bundle ID:', contractRef.bundleID);
 
   const kit = await consume[`${contractName}Kit`];
 
   trace('performing upgrade...');
-  await E(kit.adminFacet).upgradeContract(installation);
-  trace('upgrade completed successfully');
+  const upgradeResult = await E(kit.adminFacet).upgradeContract(
+    contractRef.bundleID,
+  );
+  trace('upgrade completed successfully:', upgradeResult);
 };
 
-export const getManifest = ({ restoreRef }, { installKeys }) => ({
+export const getManifest = ({ restoreRef }, { contractRef }) => ({
   installations: {
-    [contractName]: restoreRef(installKeys[contractName]),
+    [contractName]: restoreRef(contractRef),
   },
   manifest: {
     [upgradeContract.name]: {
       consume: {
         [`${contractName}Kit`]: true,
       },
-      installation: {
-        consume: { [contractName]: true },
-      },
     },
+  },
+  options: {
+    contractRef,
   },
 });

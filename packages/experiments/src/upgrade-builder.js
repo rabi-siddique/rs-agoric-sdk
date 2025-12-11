@@ -1,6 +1,5 @@
 import { makeHelpers } from '@agoric/deploy-script-support';
 import { getManifest, upgradeContract } from './upgrade-contract.js';
-import { contractName } from './name.js';
 /**
  * @import {CoreEvalBuilder} from '@agoric/deploy-script-support/src/externalTypes.js'
  */
@@ -12,9 +11,7 @@ export const defaultProposalBuilder = async ({ publishRef, install }) => {
     getManifestCall: [
       getManifest.name,
       {
-        installKeys: {
-          [contractName]: publishRef(install('./contract.js')),
-        },
+        contractRef: publishRef(install('./contract.js')),
       },
     ],
   });
