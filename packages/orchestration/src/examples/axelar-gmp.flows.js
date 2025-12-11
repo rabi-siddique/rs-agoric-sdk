@@ -10,6 +10,7 @@
  */
 
 import { makeTracer } from '@agoric/internal';
+import { gmpAddresses, buildGMPPayload } from '../utils/gmp.js';
 
 /**
  * @import {GuestInterface, GuestOf} from '@agoric/async-flow';
@@ -47,12 +48,12 @@ const trace = makeTracer('EvmFlow');
  * }} ctx
  * @param {ZCFSeat} seat
  */
-export const createlca = async (
+export const createlcaAndGmp = async (
   orch,
   { makeEvmAccountKit, chainHub },
   seat,
 ) => {
-  trace('inside createlca');
+  trace('inside createlcaAndGmp');
 
   const [agoric, remoteChain] = await Promise.all([
     orch.getChain('agoric'),
@@ -78,11 +79,18 @@ export const createlca = async (
     sourceChannel: transferChannel.counterPartyChannelId,
   });
 
-  // @ts-expect-error
-  await lca.monitorTransfers(evmAccountKit.tap);
-  trace('Monitoring transfers setup successfully');
+  const { give } = seat.getProposal();
+  await evmAccountKit.holder.fundLCA(seat, give);
 
-  seat.exit();
+  await evmAccountKit.holder.sendGmp(seat, {
+    destinationAddress: '0x2B3545638859C49df84660eA2D110f82F2e80De8',
+    type: 1,
+    destinationEVMChain: 'Avalanche',
+    gasAmount: 15_000_000,
+    contractInvocationData: [],
+  });
+
+  // Note: seat.exit() is called inside sendGmp, so no need to exit here
   return harden({ invitationMakers: evmAccountKit.invitationMakers });
 };
-harden(createlca);
+harden(createlcaAndGmp);

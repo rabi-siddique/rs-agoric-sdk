@@ -57,11 +57,6 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
   return zone.exoClassKit(
     'EvmTapKit',
     {
-      tap: M.interface('EvmTap', {
-        receiveUpcall: M.call(M.record()).returns(
-          M.or(VowShape, M.undefined()),
-        ),
-      }),
       holder: EVMI,
       invitationMakers: InvitationMakerI,
     },
@@ -87,25 +82,6 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
       });
     },
     {
-      tap: {
-        /**
-         * This function handles incoming packets from the cross-chain
-         * communication.
-         *
-         * NOTE: The implementation here is no longer relevant, as the Factory
-         * contract has been updated. Previously, this function was used to
-         * receive a response back from the Factory contract deployed on the EVM
-         * chain. However, the Factory contract now no longer sends a response
-         * to Agoric. Instead, we now fetch that response off-chain and notify
-         * the Agoric contract through off-chain mechanisms.
-         *
-         * @param {VTransferIBCEvent} event
-         */
-        receiveUpcall(event) {
-          trace('receiveUpcall', event);
-          trace('receiveUpcall completed');
-        },
-      },
       holder: {
         getLocalAddress() {
           return this.state.localAccount.getAddress().value;
@@ -154,29 +130,16 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
           if (isContractInvocation) {
             gasAmount != null ||
               Fail`gasAmount must be defined for type ${type}`;
-            contractInvocationData != null ||
-              Fail`contractInvocationData is not defined`;
-
-            contractInvocationData.length !== 0 ||
-              Fail`contractInvocationData array is empty`;
           }
 
-          const { give } = seat.getProposal();
-
-          const [[_kw, amt]] = entries(give);
-          amt.value > 0n || Fail`IBC transfer amount must be greater than zero`;
-          trace('_kw, amt', _kw, amt);
           trace(`targets: [${destinationAddress}]`);
           trace(
             `contractInvocationData: ${JSON.stringify(contractInvocationData)}`,
           );
 
-          const payload =
-            type === 3 ? null : buildGMPPayload(contractInvocationData);
+          const payload = buildGMPPayload(contractInvocationData);
 
           trace(`Payload: ${JSON.stringify(payload)}`);
-
-          trace('amt and brand', amt.brand);
 
           /** @type {AxelarGmpOutgoingMemo} */
           const memo = {
@@ -191,7 +154,6 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
               amount: String(gasAmount),
               recipient: gmpAddresses.AXELAR_GAS,
             };
-            void trace(`Fee object ${JSON.stringify(memo.fee)}`);
             trace(`Fee object ${JSON.stringify(memo.fee)}`);
           }
 
@@ -200,17 +162,17 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
             {
               value: gmpAddresses.AXELAR_GMP,
               encoding: 'bech32',
-              chainId: 'axelar-dojo-1',
+              chainId: 'axelar-testnet-lisbon-3',
             },
             {
               denom: 'ubld',
-              value: amt.value,
+              value: BigInt(gasAmount),
             },
             { memo: JSON.stringify(memo) },
           );
 
           seat.exit();
-          void trace('sendGmp successful');
+          trace('sendGmp successful');
           return 'sendGmp successful';
         },
         /**
