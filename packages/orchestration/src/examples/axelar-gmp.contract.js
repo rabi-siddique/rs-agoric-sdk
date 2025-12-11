@@ -36,7 +36,7 @@ export const contract = async (
   zone,
   { chainHub, orchestrateAll, zoeTools, vowTools },
 ) => {
-  trace('starting createlcaWithTapV1 contract');
+  trace('starting createlcaWithTapV2 contract');
 
   trace('registering chain and assets');
   registerChainsAndAssets(
