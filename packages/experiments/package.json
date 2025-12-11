@@ -6,7 +6,8 @@
   "scripts": {
     "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
     "build": "agoric run src/builder.js",
-    "deploy": "yarn build && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js"
+    "deploy": "yarn build && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js",
+    "offer": "node scripts/send-offer.mjs"
   },
   "dependencies": {
     "@agoric/cosmic-proto": "^0.5.0-u21.0",
