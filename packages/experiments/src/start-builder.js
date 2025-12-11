@@ -1,5 +1,5 @@
 import { makeHelpers } from '@agoric/deploy-script-support';
-import { getManifest, startContract } from './proposal.js';
+import { getManifest, startContract } from './start-contract.js';
 import { contractName } from './name.js';
 /**
  * @import {CoreEvalBuilder} from '@agoric/deploy-script-support/src/externalTypes.js'
@@ -8,7 +8,7 @@ import { contractName } from './name.js';
 /** @type {CoreEvalBuilder} */
 export const defaultProposalBuilder = async ({ publishRef, install }) => {
   return harden({
-    sourceSpec: './proposal.js',
+    sourceSpec: './start-contract.js',
     getManifestCall: [
       getManifest.name,
       {

@@ -1,0 +1,17 @@
+{
+  "name": "upgradeContract",
+  "script": "upgradeContract.js",
+  "permit": "upgradeContract-permit.json",
+  "bundles": [
+    {
+      "entrypoint": "./contract.js",
+      "bundleID": "b1-3aab10af73a87cb4e1c29fc8311913f065958b03d85a446bf4586461620ff2f5929843977b74e9d37109f00f97b08f7205a4fc3d7f35ad38bccf57e383e1b71f",
+      "fileName": "/home/rabi/.agoric/cache/b1-3aab10af73a87cb4e1c29fc8311913f065958b03d85a446bf4586461620ff2f5929843977b74e9d37109f00f97b08f7205a4fc3d7f35ad38bccf57e383e1b71f.json"
+    },
+    {
+      "entrypoint": "./upgrade-contract.js",
+      "bundleID": "b1-546f1a32b1681c86544e739f58df510e02950c93cab979f4db23839c75ddb01b688ad7283e3862babaeba5a23681a616d6c6e6381e0be39361fa1d77d3fe9902",
+      "fileName": "/home/rabi/.agoric/cache/b1-546f1a32b1681c86544e739f58df510e02950c93cab979f4db23839c75ddb01b688ad7283e3862babaeba5a23681a616d6c6e6381e0be39361fa1d77d3fe9902.json"
+    }
+  ]
+}

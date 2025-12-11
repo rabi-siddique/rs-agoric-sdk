@@ -26,6 +26,7 @@ export const start = async (zcf, _privateArgs, baggage) => {
     'Counter Public Facet',
     M.interface('Counter PF', {
       incrementInvitation: M.call().returns(M.any()),
+      decrementInvitation: M.call().returns(M.any()),
     }),
     {
       incrementInvitation() {
@@ -38,6 +39,19 @@ export const start = async (zcf, _privateArgs, baggage) => {
             seat.exit();
           },
           'increment counter',
+          undefined,
+        );
+      },
+      decrementInvitation() {
+        return zcf.makeInvitation(
+          async seat => {
+            const currentValue = baggage.get('counter');
+            const newValue = currentValue - 1;
+            baggage.set('counter', newValue);
+            trace(`Counter decremented to: ${newValue}`);
+            seat.exit();
+          },
+          'decrement counter',
           undefined,
         );
       },

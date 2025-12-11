@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
-    "build": "agoric run src/builder.js",
+    "build": "agoric run src/start-builder.js",
+    "build:upgrade": "agoric run src/upgrade-builder.js",
     "deploy": "yarn build && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js",
+    "upgrade": "yarn build:upgrade && runInsideContainer=true net=devnet planFile=upgradeContract-plan.json node deploy.js",
     "offer": "node scripts/send-offer.mjs"
   },
   "dependencies": {
