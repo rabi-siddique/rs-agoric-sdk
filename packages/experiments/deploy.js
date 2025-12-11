@@ -23,7 +23,7 @@ const CHAINID = chainIds[net];
 const RPC = rpcs[net];
 console.log({ CHAINID, RPC });
 const GAS_ADJUSTMENT = '1.2';
-const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --node=https://devnet.rpc.agoric.net:443 --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b block`;
+const SIGN_BROADCAST_OPTS = `--keyring-backend=test --chain-id=${CHAINID} --node=https://devnet.rpc.agoric.net:443 --gas=auto --gas-adjustment=${GAS_ADJUSTMENT} --yes -b sync`;
 const walletName = 'gov1';
 
 const proposalTitle =
@@ -96,7 +96,7 @@ const installBundles = async () => {
   for (const b of bundleFiles) {
     let cmd = `cd /usr/src && `;
 
-    cmd += `echo 'Installing ${b}' && ls -sh '${b}' && agd tx swingset install-bundle --compress '@${b}' --from ${walletName} -bblock ${SIGN_BROADCAST_OPTS}`;
+    cmd += `echo 'Installing ${b}' && ls -sh '${b}' && agd tx swingset install-bundle '@${b}' --from ${walletName} ${SIGN_BROADCAST_OPTS}`;
     console.log(`Executing installation for bundle ${b}`);
     await execCmd(cmd);
     await new Promise(resolve => setTimeout(resolve, 5000));
