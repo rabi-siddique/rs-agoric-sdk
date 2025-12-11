@@ -36,9 +36,9 @@ export const contract = async (
   zone,
   { chainHub, orchestrateAll, zoeTools, vowTools },
 ) => {
-  trace('starting createlcaWithTapV2 contract');
+  trace('starting createlcaAndGmp contract');
 
-  trace('registering chain and assets');
+  trace('registering chain and assets', JSON.stringify(privateArgs));
   registerChainsAndAssets(
     chainHub,
     zcf.getTerms().brands,
@@ -55,7 +55,7 @@ export const contract = async (
   });
 
   const { localTransfer } = zoeTools;
-  const { createlca } = orchestrateAll(evmFlows, {
+  const { createlcaAndGmp } = orchestrateAll(evmFlows, {
     localTransfer,
     makeEvmAccountKit,
     chainHub,
@@ -64,18 +64,18 @@ export const contract = async (
   const publicFacet = zone.exo(
     'Send PF',
     M.interface('Send PF', {
-      createlca: M.callWhen().returns(M.any()),
+      createlcaAndGmp: M.callWhen().returns(M.any()),
     }),
     {
-      createlca() {
+      createlcaAndGmp() {
         return zcf.makeInvitation(
           /**
            * @param {ZCFSeat} seat
            */
           seat => {
-            return createlca(seat);
+            return createlcaAndGmp(seat);
           },
-          'createlca',
+          'createlcaAndGmp',
           undefined,
         );
       },
