@@ -18,6 +18,7 @@ export const start = async (zcf, _privateArgs, baggage) => {
   trace(`${contractName} contract started...`);
 
   if (!baggage.has('counter')) {
+    trace('init counter');
     baggage.init('counter', 0);
   }
 
