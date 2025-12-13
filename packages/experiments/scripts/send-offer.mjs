@@ -11,12 +11,12 @@ const { log, error } = console;
 try {
   log('Preparing offer to increment counter...');
   const offer = await prepareOffer({
-    publicInvitationMaker: 'decrementInvitation',
+    publicInvitationMaker: 'setCounterInvitation',
     instanceName: 'counterv2',
     // brandName: 'BLD',
     // amount: 20_000_000n,
     source: 'contract',
-    offerArgs: {},
+    offerArgs: { value: 900 },
   });
 
   await processWalletOffer({
