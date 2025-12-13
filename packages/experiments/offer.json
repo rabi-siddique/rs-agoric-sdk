@@ -1,5 +1,5 @@
 {
-  "body": "#{\"method\":\"executeOffer\",\"offer\":{\"id\":\"offer-1765650467503\",\"invitationSpec\":{\"instance\":\"$0.Alleged: BoardRemoteInstanceHandle\",\"publicInvitationMaker\":\"incrementInvitation\",\"source\":\"contract\"},\"offerArgs\":{},\"proposal\":{}}}",
+  "body": "#{\"method\":\"executeOffer\",\"offer\":{\"id\":\"offer-1765651071336\",\"invitationSpec\":{\"instance\":\"$0.Alleged: BoardRemoteInstanceHandle\",\"publicInvitationMaker\":\"decrementInvitation\",\"source\":\"contract\"},\"offerArgs\":{},\"proposal\":{}}}",
   "slots": [
     "board045628"
   ]

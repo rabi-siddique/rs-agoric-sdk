@@ -29,6 +29,7 @@ export const start = async (zcf, _privateArgs, baggage) => {
     M.interface('Counter PF', {
       getCounter: M.call().returns(M.number()),
       incrementInvitation: M.call().returns(M.any()),
+      decrementInvitation: M.call().returns(M.any()),
     }),
     () => {
       trace('Init function called - creating new state');
@@ -48,6 +49,19 @@ export const start = async (zcf, _privateArgs, baggage) => {
             seat.exit();
           },
           'increment counter',
+          undefined,
+        );
+      },
+      decrementInvitation() {
+        return zcf.makeInvitation(
+          async seat => {
+            const currentValue = this.state.counter;
+            const newValue = currentValue - 1;
+            this.state.counter = newValue;
+            trace(`Counter decremented to: ${newValue}`);
+            seat.exit();
+          },
+          'decrement counter',
           undefined,
         );
       },
