@@ -34,15 +34,22 @@ export const start = async (zcf, _privateArgs, baggage) => {
     }),
     () => {
       trace('Init function called - creating new state');
-      return { counter: 0 };
+      return {
+        counter: 0,
+        label: 'v2-state',
+      };
     },
     {
       getCounter() {
+        trace(
+          `[getCounter] label: ${this.state.label}, counter: ${this.state.counter}`,
+        );
         return this.state.counter;
       },
       incrementInvitation() {
         return zcf.makeInvitation(
           async seat => {
+            trace(`[increment] label: ${this.state.label}`);
             const currentValue = this.state.counter;
             const newValue = currentValue + 1;
             this.state.counter = newValue;
@@ -56,6 +63,7 @@ export const start = async (zcf, _privateArgs, baggage) => {
       decrementInvitation() {
         return zcf.makeInvitation(
           async seat => {
+            trace(`[decrement] label: ${this.state.label}`);
             const currentValue = this.state.counter;
             const newValue = currentValue - 1;
             this.state.counter = newValue;
@@ -69,6 +77,7 @@ export const start = async (zcf, _privateArgs, baggage) => {
       setCounterInvitation() {
         return zcf.makeInvitation(
           async (seat, offerArgs) => {
+            trace(`[setCounter] label: ${this.state.label}`);
             assert(offerArgs, 'offerArgs is required');
             const { value } = offerArgs;
             assert.typeof(value, 'number', 'value must be a number');

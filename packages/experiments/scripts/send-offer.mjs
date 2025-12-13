@@ -16,7 +16,7 @@ try {
     // brandName: 'BLD',
     // amount: 20_000_000n,
     source: 'contract',
-    offerArgs: { value: 900 },
+    offerArgs: { value: 200 },
   });
 
   await processWalletOffer({
