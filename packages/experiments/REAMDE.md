@@ -1,39 +1,45 @@
-## The Problem: prepareExo + Interface Changes = Baggage Corruption
+# prepareExo & prepareExoClass Cheat Sheet
 
-Your contract uses the same baggage object for TWO purposes:
-1. Storing your counter: baggage.init('counter', 0)
-2. Passed to prepareExo(baggage, ...) which internally stores:
-    - Kind handle at key: 'Counter Public Facet_kindHandle'
-    - Singleton at key: 'Counter Public Facet_singleton'
+## prepareExoClass
 
-When you changed the interface (adding `decrementInvitation` in the upgrade), here's what went wrong:
-```js
-  // OLD (v1): Only incrementInvitation
-  prepareExo(baggage, 'Counter Public Facet',
-    M.interface('Counter PF', {
-      incrementInvitation: M.call().returns(M.any()),
-    }), ...)
+**What it is:**
+- Returns maker function for creating instances
+- Use for: factories, multiple objects
 
-  // NEW (v2): Added decrementInvitation
-  prepareExo(baggage, 'Counter Public Facet',
-    M.interface('Counter PF', {
-      incrementInvitation: M.call().returns(M.any()),
-      decrementInvitation: M.call().returns(M.any()),  // ← INTERFACE CHANGED!
-    }), ...)
-```
+**State Behavior:**
+- Has init function that returns initial state
+- Init runs ONLY on fresh deployment
+- Init does NOT run on upgrades
+- Old state fields: ✅ Preserved with values
+- New state fields: ❌ undefined (need migration)
+- Access state: `this.state.field`
+- Migration: `if (!('field' in state)) state.field = 'default'`
 
-## What Happens Internally
+**Interface Behavior:**
+- ✅ Safe: Keep methods same, change implementation
+- ⚠️ Caution: Add new method (test first)
+- ❌ DANGEROUS: Change signature, remove method, rename method
+- Danger result: Baggage corruption = ALL data lost
 
-From `vat-data/src/exo-utils.js:305-322`:
-```js
-  const prepareExo = (baggage, kindName, interfaceGuard, methods, ...) => {
-    const makeSingleton = prepareExoClass(baggage, kindName, interfaceGuard, ...);
-    return provide(baggage, `${kindName}_singleton`, () => makeSingleton());
-  };
-```
+---
 
-On upgrade:
-1. `prepareExoClass` tries to redefine the durable kind with the NEW interface
-2. The existing singleton (stored in baggage) was created with the OLD interface
-3. This creates an incompatibility - the stored singleton doesn't match the new kind definition
-4. This conflict can corrupt or clear the baggage namespace, affecting ALL keys including your 'counter' key!
+## prepareExo
+
+**What it is:**
+- Returns singleton instance immediately
+- Use for: single public facet
+
+**State Behavior:**
+- NO init function (uses empty state `{}`)
+- State managed externally (in baggage or closure scope)
+- Cannot define initial state in exo
+- Common pattern: Store state directly in baggage
+- Example: `baggage.init('counter', 0)` then `baggage.get('counter')`
+
+**Interface Behavior:**
+- ✅ Safe: Keep methods same, change implementation
+- ⚠️ Caution: Add new method (test first)
+- ❌ DANGEROUS: Change signature, remove method, rename method
+- Danger result: Baggage corruption = ALL data lost
+
+---
