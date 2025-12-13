@@ -12,7 +12,7 @@ try {
   log('Preparing offer to increment counter...');
   const offer = await prepareOffer({
     publicInvitationMaker: 'incrementInvitation',
-    instanceName: 'counter',
+    instanceName: 'counterv2',
     // brandName: 'BLD',
     // amount: 20_000_000n,
     source: 'contract',

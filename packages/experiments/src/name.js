@@ -1,1 +1,1 @@
-export const contractName = 'counter';
+export const contractName = 'counterv2';

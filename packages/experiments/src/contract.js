@@ -1,4 +1,4 @@
-import { prepareExo } from '@agoric/vat-data';
+import { prepareExoClass, provide } from '@agoric/vat-data';
 import { M } from '@agoric/store';
 import { makeTracer } from '@agoric/internal';
 import { contractName } from './name.js';
@@ -15,27 +15,35 @@ export const meta = { upgradability: 'canUpgrade' };
  * @param {MapStore<any, any>} baggage
  */
 export const start = async (zcf, _privateArgs, baggage) => {
-  trace(`${contractName} contract started...`);
+  const isReincarnation = baggage.has('Counter Public Facet_singleton');
 
-  if (!baggage.has('counter')) {
-    trace('init counter');
-    baggage.init('counter', 0);
+  if (isReincarnation) {
+    trace(`${contractName} contract REINCARNATED (upgrade)`);
+  } else {
+    trace(`${contractName} contract FRESH START (first deployment)`);
   }
 
-  const publicFacet = prepareExo(
+  const makePublicFacet = prepareExoClass(
     baggage,
     'Counter Public Facet',
     M.interface('Counter PF', {
+      getCounter: M.call().returns(M.number()),
       incrementInvitation: M.call().returns(M.any()),
-      decrementInvitation: M.call().returns(M.any()),
     }),
+    () => {
+      trace('Init function called - creating new state');
+      return { counter: 0 };
+    },
     {
+      getCounter() {
+        return this.state.counter;
+      },
       incrementInvitation() {
         return zcf.makeInvitation(
           async seat => {
-            const currentValue = baggage.get('counter');
+            const currentValue = this.state.counter;
             const newValue = currentValue + 1;
-            baggage.set('counter', newValue);
+            this.state.counter = newValue;
             trace(`Counter incremented to: ${newValue}`);
             seat.exit();
           },
@@ -43,20 +51,11 @@ export const start = async (zcf, _privateArgs, baggage) => {
           undefined,
         );
       },
-      decrementInvitation() {
-        return zcf.makeInvitation(
-          async seat => {
-            const currentValue = baggage.get('counter');
-            const newValue = currentValue - 1;
-            baggage.set('counter', newValue);
-            trace(`Counter decremented to: ${newValue}`);
-            seat.exit();
-          },
-          'decrement counter',
-          undefined,
-        );
-      },
     },
+  );
+
+  const publicFacet = provide(baggage, 'Counter Public Facet_singleton', () =>
+    makePublicFacet(),
   );
 
   trace('counter contract started successfully');
