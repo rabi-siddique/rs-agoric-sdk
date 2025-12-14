@@ -27,7 +27,6 @@ export const meta = { upgradability: 'canUpgrade' };
  * @param {MapStore<any, any>} baggage
  */
 export const start = async (zcf, privateArgs, baggage) => {
-  trace('NOTE: proposal updates remain based on this contract');
   const { storageNode, marshaller } = privateArgs;
   const isReincarnation = baggage.has(`${contractName} Public Facet_singleton`);
 
