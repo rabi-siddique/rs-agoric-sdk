@@ -60,5 +60,6 @@ export default [
   "@agoric/zoe",
   "@agoric/zone",
   "agoric",
-  "agoric-contract-experiments"
+  "agoric-contract-experiments",
+  "agoric-experiments-deploy"
 ];

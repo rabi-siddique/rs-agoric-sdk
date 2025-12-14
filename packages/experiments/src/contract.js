@@ -42,12 +42,17 @@ export const contract = async (
 ) => {
   trace(`${contractName} started`);
 
-  registerChainsAndAssets(
-    chainHub,
-    zcf.getTerms().brands,
-    privateArgs.chainInfo,
-    privateArgs.assetInfo,
-  );
+  if (chainHub.isEmpty()) {
+    trace('Registering chains and assets');
+    registerChainsAndAssets(
+      chainHub,
+      zcf.getTerms().brands,
+      privateArgs.chainInfo,
+      privateArgs.assetInfo,
+    );
+  } else {
+    trace('chainHub already populated, using existing entries');
+  }
 
   const creatorFacet = prepareChainHubAdmin(zone, chainHub);
 
@@ -58,9 +63,12 @@ export const contract = async (
   });
 
   // const { localTransfer, withdrawToSeat } = zoeTools;
-  const { createLCA } = orchestrateAll(evmFlows, {
-    makeEvmAccountKit,
-  });
+  const { createLCA } = orchestrateAll(
+    { createLCA: evmFlows.createLCA },
+    {
+      makeEvmAccountKit,
+    },
+  );
 
   const publicFacet = zone.exo(
     `${contractName} PF`,

@@ -23,7 +23,9 @@ export const defaultProposalBuilder = async (
     getManifestCall: [
       getManifest.name,
       {
-        installationRef: publishRef(install('../dist/contract.bundle.js')),
+        installationRef: publishRef(
+          install('../../experiments/dist/contract.bundle.js'),
+        ),
         options,
       },
     ],

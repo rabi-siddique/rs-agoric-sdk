@@ -6,7 +6,7 @@ import {
   NonNullish,
 } from '@agoric/internal';
 import { E } from '@endo/far';
-import { contractName } from '../src/name.js';
+import { contractName } from 'agoric-contract-experiments/src/name.js';
 
 /**
  * @import {Issuer} from '@agoric/ertp';

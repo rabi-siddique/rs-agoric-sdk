@@ -1,0 +1,30 @@
+{
+  "name": "agoric-experiments-deploy",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
+    "build": "bash build-gmp.sh",
+    "deploy": "yarn build && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js",
+    "make-offer": "node scripts/send-offer.mjs",
+    "send-gmp": "node scripts/sendGmp.mjs"
+  },
+  "dependencies": {
+    "@agoric/internal": "workspace:*",
+    "@endo/far": "^1.1.14",
+    "@endo/init": "^1.1.12",
+    "@endo/pass-style": "^1.6.3",
+    "agoric-contract-experiments": "workspace:*",
+    "execa": "^9.6.0"
+  },
+  "devDependencies": {
+    "@agoric/cosmic-proto": "workspace:*",
+    "@agoric/deploy-script-support": "workspace:*"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Deployment scripts for Agoric contract experiments",
+  "packageManager": "yarn@4.9.2"
+}
