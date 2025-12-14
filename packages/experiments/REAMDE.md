@@ -2,10 +2,6 @@
 
 ## prepareExoClass
 
-**What it is:**
-- Returns maker function for creating instances
-- Use for: factories, multiple objects
-
 **State Behavior:**
 - Has init function that returns initial state
 - Init runs ONLY on fresh deployment
@@ -24,10 +20,6 @@
 ---
 
 ## prepareExo
-
-**What it is:**
-- Returns singleton instance immediately
-- Use for: single public facet
 
 **State Behavior:**
 - NO init function (uses empty state `{}`)
