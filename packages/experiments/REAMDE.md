@@ -39,3 +39,7 @@
 ## References
 - [Contract Upgrades](https://docs.agoric.com/guides/zoe/contract-upgrade#kinds)
 - [init specifying state](https://docs.agoric.com/guides/zoe/contract-details.html#init-specifying-state)
+
+## Branches
+- `rs-write-to-vstorage`: Write to vstorage contract.
+- `rs-contract-upgrade`: counter contract to test contract upgradability stuff with exos.
