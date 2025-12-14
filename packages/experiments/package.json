@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "esbuild ./src/contract.js --bundle --platform=node --format=esm --outfile=dist/contract.bundle.js"
+    "build": "esbuild ./src/contract.js --bundle --platform=node --format=esm --outfile=dist/contract.bundle.js --minify"
   },
   "dependencies": {
     "@agoric/cosmic-proto": "workspace:*",
