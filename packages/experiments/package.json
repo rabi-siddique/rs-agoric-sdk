@@ -5,15 +5,13 @@
   "type": "module",
   "scripts": {
     "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
-    "gen-bundles": "esbuild ./src/contract.js --platform=node --format=esm --bundle --outfile=dist/contract.bundle.js",
+    "gen-bundles": "esbuild ./src/contract.js --bundle --platform=node --format=esm --outfile=dist/contract.bundle.js --metafile=dist/contract.meta.json --minify --tree-shaking=true",
     "build": "bash build-gmp.sh",
     "deploy": "yarn build && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js",
     "make-off": "node scripts/send-offer.mjs",
     "send-gmp": "node scripts/sendGmp.mjs"
   },
   "dependencies": {
-    "@agoric/cosmic-proto": "^0.5.0-u21.0",
-    "@agoric/deploy-script-support": "workspace:*",
     "@agoric/internal": "^0.4.0-u21.0",
     "@agoric/store": "workspace:*",
     "@agoric/vat-data": "workspace:*",
@@ -27,10 +25,12 @@
     "@endo/init": "^1.1.9",
     "@endo/marshal": "^1.6.4",
     "@endo/pass-style": "^1.5.0",
-    "@endo/patterns": "^1.5.0",
-    "ava": "5.3.0"
+    "@endo/patterns": "^1.5.0"
   },
   "devDependencies": {
+    "@agoric/cosmic-proto": "^0.5.0-u21.0",
+    "@agoric/deploy-script-support": "workspace:*",
+    "ava": "5.3.0",
     "esbuild": "^0.25.2",
     "execa": "^9.6.0",
     "typescript": "~5.8.2"
