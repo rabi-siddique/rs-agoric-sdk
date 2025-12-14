@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // @ts-check
+import { contractName } from 'agoric-contract-experiments/src/name.js';
 import './lockdown.mjs';
 import { prepareOffer, processWalletOffer } from './utils.mjs';
 
@@ -9,14 +10,14 @@ const FROM_ADDRESS = 'agoric1ee9hr0jyrxhy999y755mp862ljgycmwyp4pl7q';
 const { log, error } = console;
 
 // The offer ID from the previous createlcaAndGmp offer
-const PREVIOUS_OFFER_ID = 'offer-1765434629993';
+const PREVIOUS_OFFER_ID = 'offer-1765713233618';
 
 try {
   log('--- Sending GMP Message via InvitationMakers ---');
 
   log('Preparing offer...');
   const offer = await prepareOffer({
-    instanceName: 'createlcaAndGmpV3',
+    instanceName: contractName,
     source: 'continuing',
     previousOffer: PREVIOUS_OFFER_ID,
     invitationMakerName: 'makeEVMTransactionInvitation',
@@ -24,16 +25,13 @@ try {
       'sendGmp',
       [
         {
-          destinationAddress: '0x2B3545638859C49df84660eA2D110f82F2e80De8',
-          type: 1,
           destinationEVMChain: 'Avalanche',
-          gasAmount: 15_000_000,
-          contractInvocationData: [],
+          destinationAddress: '0x2B3545638859C49df84660eA2D110f82F2e80De8',
         },
       ],
     ],
     brandName: 'BLD',
-    amount: 15_000_000n,
+    amount: 20_000_000n,
   });
 
   await processWalletOffer({

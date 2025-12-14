@@ -108,7 +108,7 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
          * @param {ZCFSeat} seat
          * @param {OfferArgs} offerArgs
          */
-        async sendGmp(seat, offerArgs) {
+        sendGmp(seat, offerArgs) {
           trace('Inside sendGmp');
           const { destinationAddress, destinationEVMChain } = offerArgs;
 
@@ -128,21 +128,23 @@ export const prepareEvmAccountKit = (zone, { zcf, vowTools, zoeTools }) => {
           };
 
           trace('Initiating IBC Transfer...');
-          await this.state.localAccount.transfer(
-            {
-              value: gmpAddresses.AXELAR_GMP,
-              encoding: 'bech32',
-              chainId,
-            },
-            {
-              denom: 'ubld',
-              value: BigInt(gasAmount),
-            },
-            { memo: JSON.stringify(memo) },
-          );
+          return vowTools.asVow(async () => {
+            await this.state.localAccount.transfer(
+              {
+                value: gmpAddresses.AXELAR_GMP,
+                encoding: 'bech32',
+                chainId,
+              },
+              {
+                denom: 'ubld',
+                value: BigInt(gasAmount),
+              },
+              { memo: JSON.stringify(memo) },
+            );
 
-          seat.exit();
-          return 'sendGmp successful';
+            seat.exit();
+            return 'sendGmp successful';
+          });
         },
         /**
          * @param {ZCFSeat} seat
