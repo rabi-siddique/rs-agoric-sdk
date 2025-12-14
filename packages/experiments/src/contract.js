@@ -1,21 +1,35 @@
 import { prepareExoClass, provide } from '@agoric/vat-data';
+import { E } from '@endo/far';
 import { M } from '@agoric/store';
 import { makeTracer } from '@agoric/internal';
 import { contractName } from './name.js';
 
-const trace = makeTracer('counter');
+const trace = makeTracer(contractName);
 
 export const meta = { upgradability: 'canUpgrade' };
 
 /**
- * A simple counter contract that increments a counter and logs its value
+ * @typedef {{
+ *   vPath: string,
+ *   vData: any,
+ * }} PushOfferArgs
+ */
+
+/**
+ * A simple contract that writes to vstorage
  *
  * @param {ZCF} zcf
- * @param {{}} _privateArgs
+ * @param {{
+*   storageNode: StorageNode,
+*   marshaller: Marshaller
+* }} privateArgs
+
  * @param {MapStore<any, any>} baggage
  */
-export const start = async (zcf, _privateArgs, baggage) => {
-  const isReincarnation = baggage.has('Counter Public Facet_singleton');
+export const start = async (zcf, privateArgs, baggage) => {
+  trace('NOTE: proposal updates remain based on this contract');
+  const { storageNode, marshaller } = privateArgs;
+  const isReincarnation = baggage.has(`${contractName} Public Facet_singleton`);
 
   if (isReincarnation) {
     trace(`${contractName} contract REINCARNATED (upgrade)`);
@@ -25,79 +39,43 @@ export const start = async (zcf, _privateArgs, baggage) => {
 
   const makePublicFacet = prepareExoClass(
     baggage,
-    'Counter Public Facet',
-    M.interface('Counter PF', {
-      getCounter: M.call().returns(M.number()),
-      incrementBy5: M.call().returns(M.any()),
-      decrementInvitation: M.call().returns(M.any()),
-      setCounterInvitation: M.call().returns(M.any()),
+    `${contractName} Public Facet`,
+    M.interface(`${contractName} PF`, {
+      vPusherInvitation: M.call().returns(M.any()),
     }),
     () => {
       trace('Init function called - creating new state');
-      return {
-        counter: 0,
-        label: 'v2-state',
-      };
+      return {};
     },
     {
-      getCounter() {
-        trace(
-          `[getCounter] label: ${this.state.label}, counter: ${this.state.counter}`,
-        );
-        return this.state.counter;
-      },
-      incrementBy5() {
+      vPusherInvitation() {
         return zcf.makeInvitation(
-          async seat => {
-            trace(`[increment] label: ${this.state.label}`);
-            const currentValue = this.state.counter;
-            const newValue = currentValue + 5;
-            this.state.counter = newValue;
-            trace(`Counter incremented to: ${newValue}`);
+          async (seat, /** @type {PushOfferArgs} */ offerArgs) => {
+            const { vPath, vData } = offerArgs;
+
+            trace(`Pushing to ${vPath}:`, vData);
+
+            const marshalled = await E(marshaller).toCapData(vData);
+            const serialized = JSON.stringify(marshalled);
+            const pathNode = E(storageNode).makeChildNode(vPath);
+            await E(pathNode).setValue(serialized);
+
             seat.exit();
           },
-          'increment counter',
-          undefined,
-        );
-      },
-      decrementInvitation() {
-        return zcf.makeInvitation(
-          async seat => {
-            trace(`[decrement] label: ${this.state.label}`);
-            const currentValue = this.state.counter;
-            const newValue = currentValue - 1;
-            this.state.counter = newValue;
-            trace(`Counter decremented to: ${newValue}`);
-            seat.exit();
-          },
-          'decrement counter',
-          undefined,
-        );
-      },
-      setCounterInvitation() {
-        return zcf.makeInvitation(
-          async (seat, offerArgs) => {
-            trace(`[setCounter] label: ${this.state.label}`);
-            assert(offerArgs, 'offerArgs is required');
-            const { value } = offerArgs;
-            assert.typeof(value, 'number', 'value must be a number');
-            const oldValue = this.state.counter;
-            this.state.counter = value;
-            trace(`Counter set from ${oldValue} to: ${value}`);
-            seat.exit();
-          },
-          'set counter',
+          'push data',
           undefined,
         );
       },
     },
   );
 
-  const publicFacet = provide(baggage, 'Counter Public Facet_singleton', () =>
-    makePublicFacet(),
+  const publicFacet = provide(
+    baggage,
+    `${contractName} Public Facet_singleton`,
+    () => makePublicFacet(),
   );
 
-  trace('counter contract started successfully');
+  trace(`${contractName} contract started successfully`);
   return {
     publicFacet,
   };
