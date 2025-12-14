@@ -22,5 +22,5 @@
     "rewriteRelativeImportExtensions": true,
     "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "deploy/upgrade-builder.js", "deploy/upgrade-contract.js"]
 }

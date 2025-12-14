@@ -1,6 +1,0 @@
-{
-  "body": "#{\"method\":\"executeOffer\",\"offer\":{\"id\":\"offer-1765693541717\",\"invitationSpec\":{\"instance\":\"$0.Alleged: BoardRemoteInstanceHandle\",\"publicInvitationMaker\":\"incrementBy5\",\"source\":\"contract\"},\"offerArgs\":{\"value\":200},\"proposal\":{}}}",
-  "slots": [
-    "board045628"
-  ]
-}

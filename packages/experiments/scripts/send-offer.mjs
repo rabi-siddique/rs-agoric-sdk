@@ -9,14 +9,16 @@ const FROM_ADDRESS = 'agoric1ee9hr0jyrxhy999y755mp862ljgycmwyp4pl7q';
 const { log, error } = console;
 
 try {
-  log('Preparing offer to increment counter...');
+  log('--- Creating LCA ---');
+
+  log('Preparing offer...');
+
   const offer = await prepareOffer({
-    publicInvitationMaker: 'incrementBy5',
-    instanceName: 'counterv2',
-    // brandName: 'BLD',
-    // amount: 20_000_000n,
+    publicInvitationMaker: 'createlcaAndGmp',
+    instanceName: 'createlcaAndGmpV3',
     source: 'contract',
-    offerArgs: { value: 200 },
+    brandName: 'BLD',
+    amount: 20_000_000n,
   });
 
   await processWalletOffer({

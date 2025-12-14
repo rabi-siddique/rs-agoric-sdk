@@ -1,104 +1,98 @@
-import { prepareExoClass, provide } from '@agoric/vat-data';
-import { M } from '@agoric/store';
 import { makeTracer } from '@agoric/internal';
+import { M } from '@endo/patterns';
+import {
+  withOrchestration,
+  registerChainsAndAssets,
+  prepareChainHubAdmin,
+} from '@agoric/orchestration';
+import { prepareEvmAccountKit } from './account-kit.js';
+import * as evmFlows from './contract.flows.js';
+import { Fail } from '@endo/errors';
 import { contractName } from './name.js';
 
-const trace = makeTracer('counter');
+/**
+ * @import {Remote} from '@agoric/vow';
+ * @import {Zone} from '@agoric/zone';
+ * @import {OrchestrationPowers, OrchestrationTools} from '@agoric/orchestration';
+ * @import {CosmosChainInfo, Denom, DenomDetail} from '@agoric/orchestration';
+ * @import {Marshaller, StorageNode} from '@agoric/internal/src/lib-chainStorage.js';
+ * @import {ZCF} from '@agoric/zoe';
+ */
 
-export const meta = { upgradability: 'canUpgrade' };
+const trace = makeTracer(contractName);
 
 /**
- * A simple counter contract that increments a counter and logs its value
+ * Orchestration contract to be wrapped by withOrchestration for Zoe
  *
  * @param {ZCF} zcf
- * @param {{}} _privateArgs
- * @param {MapStore<any, any>} baggage
+ * @param {OrchestrationPowers & {
+ *   marshaller: Remote<Marshaller>;
+ *   chainInfo?: Record<string, CosmosChainInfo>;
+ *   assetInfo?: [Denom, DenomDetail & { brandKey?: string }][];
+ *   storageNode: Remote<StorageNode>;
+ * }} privateArgs
+ * @param {Zone} zone
+ * @param {OrchestrationTools} tools
  */
-export const start = async (zcf, _privateArgs, baggage) => {
-  const isReincarnation = baggage.has('Counter Public Facet_singleton');
+export const contract = async (
+  zcf,
+  privateArgs,
+  zone,
+  { chainHub, orchestrateAll, vowTools, zoeTools },
+) => {
+  trace(`${contractName} started`);
 
-  if (isReincarnation) {
-    trace(`${contractName} contract REINCARNATED (upgrade)`);
-  } else {
-    trace(`${contractName} contract FRESH START (first deployment)`);
-  }
+  registerChainsAndAssets(
+    chainHub,
+    zcf.getTerms().brands,
+    privateArgs.chainInfo,
+    privateArgs.assetInfo,
+  );
 
-  const makePublicFacet = prepareExoClass(
-    baggage,
-    'Counter Public Facet',
-    M.interface('Counter PF', {
-      getCounter: M.call().returns(M.number()),
-      incrementBy5: M.call().returns(M.any()),
-      decrementInvitation: M.call().returns(M.any()),
-      setCounterInvitation: M.call().returns(M.any()),
+  const creatorFacet = prepareChainHubAdmin(zone, chainHub);
+
+  const makeEvmAccountKit = prepareEvmAccountKit(zone.subZone('evmTap'), {
+    zcf,
+    vowTools,
+    zoeTools,
+  });
+
+  // const { localTransfer, withdrawToSeat } = zoeTools;
+  const { createLCA } = orchestrateAll(evmFlows, {
+    makeEvmAccountKit,
+  });
+
+  const publicFacet = zone.exo(
+    `${contractName} PF`,
+    M.interface(`${contractName} PF`, {
+      createLCA: M.callWhen().returns(M.any()),
     }),
-    () => {
-      trace('Init function called - creating new state');
-      return {
-        counter: 0,
-        label: 'v2-state',
-      };
-    },
     {
-      getCounter() {
-        trace(
-          `[getCounter] label: ${this.state.label}, counter: ${this.state.counter}`,
-        );
-        return this.state.counter;
-      },
-      incrementBy5() {
+      createLCA() {
         return zcf.makeInvitation(
-          async seat => {
-            trace(`[increment] label: ${this.state.label}`);
-            const currentValue = this.state.counter;
-            const newValue = currentValue + 5;
-            this.state.counter = newValue;
-            trace(`Counter incremented to: ${newValue}`);
-            seat.exit();
+          /**
+           * @param {ZCFSeat} seat
+           * @param {import('./account-kit.js').OfferArgs} offerArgs
+           */
+          (seat, offerArgs) => {
+            const { destinationAddress, destinationEVMChain } = offerArgs;
+
+            destinationAddress != null ||
+              Fail`Destination address must be defined`;
+            destinationEVMChain != null ||
+              Fail`Destination evm address must be defined`;
+            return createLCA(seat, offerArgs);
           },
-          'increment counter',
-          undefined,
-        );
-      },
-      decrementInvitation() {
-        return zcf.makeInvitation(
-          async seat => {
-            trace(`[decrement] label: ${this.state.label}`);
-            const currentValue = this.state.counter;
-            const newValue = currentValue - 1;
-            this.state.counter = newValue;
-            trace(`Counter decremented to: ${newValue}`);
-            seat.exit();
-          },
-          'decrement counter',
-          undefined,
-        );
-      },
-      setCounterInvitation() {
-        return zcf.makeInvitation(
-          async (seat, offerArgs) => {
-            trace(`[setCounter] label: ${this.state.label}`);
-            assert(offerArgs, 'offerArgs is required');
-            const { value } = offerArgs;
-            assert.typeof(value, 'number', 'value must be a number');
-            const oldValue = this.state.counter;
-            this.state.counter = value;
-            trace(`Counter set from ${oldValue} to: ${value}`);
-            seat.exit();
-          },
-          'set counter',
+          'makeAccount',
           undefined,
         );
       },
     },
   );
 
-  const publicFacet = provide(baggage, 'Counter Public Facet_singleton', () =>
-    makePublicFacet(),
-  );
-
-  trace('counter contract started successfully');
-  return {
-    publicFacet,
-  };
+  return { publicFacet, creatorFacet };
 };
+harden(contract);
+
+export const start = withOrchestration(contract);
+harden(start);

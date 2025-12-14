@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
-    "build": "agoric run src/start-builder.js",
-    "build:upgrade": "agoric run src/upgrade-builder.js",
+    "gen-bundles": "esbuild ./src/contract.js --platform=node --format=esm --bundle --outfile=dist/contract.bundle.js",
+    "build": "bash build-gmp.sh",
     "deploy": "yarn build && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js",
-    "upgrade": "yarn build:upgrade && runInsideContainer=true net=devnet planFile=upgradeContract-plan.json node deploy.js",
-    "offer": "node scripts/send-offer.mjs"
+    "make-off": "node scripts/send-offer.mjs",
+    "send-gmp": "node scripts/sendGmp.mjs"
   },
   "dependencies": {
     "@agoric/cosmic-proto": "^0.5.0-u21.0",
@@ -31,6 +31,7 @@
     "ava": "5.3.0"
   },
   "devDependencies": {
+    "esbuild": "^0.25.2",
     "execa": "^9.6.0",
     "typescript": "~5.8.2"
   },

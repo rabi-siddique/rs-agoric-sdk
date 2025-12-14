@@ -1,6 +1,6 @@
 import { makeTracer } from '@agoric/internal';
 import { E } from '@endo/far';
-import { contractName } from './name.js';
+import { contractName } from '../src/name.js';
 
 const trace = makeTracer('upgrade');
 
