@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // @ts-check
+import { contractName } from 'agoric-contract-experiments/src/name.js';
 import './lockdown.mjs';
 import { prepareOffer, processWalletOffer } from './utils.mjs';
 
@@ -14,11 +15,15 @@ try {
   log('Preparing offer...');
 
   const offer = await prepareOffer({
-    publicInvitationMaker: 'createlcaAndGmp',
-    instanceName: 'createlcaAndGmpV3',
+    publicInvitationMaker: 'createLCA',
+    instanceName: contractName,
     source: 'contract',
     brandName: 'BLD',
     amount: 20_000_000n,
+    offerArgs: {
+      destinationEVMChain: 'Avalanche',
+      destinationAddress: '0x2B3545638859C49df84660eA2D110f82F2e80De8',
+    },
   });
 
   await processWalletOffer({

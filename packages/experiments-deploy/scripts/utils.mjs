@@ -2,7 +2,7 @@
 import {
   boardSlottingMarshaller,
   makeBoardRemote,
-} from '@agoric/internal/src/marshal.js';
+} from '@agoric/internal/src/marshal/board-client-utils.js';
 import { execa } from 'execa';
 import fs from 'fs/promises';
 import { makeVStorage } from './vstorage.mjs';
