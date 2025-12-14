@@ -44,7 +44,7 @@ const trace = makeTracer('EvmAccountKit');
 const EVMI = M.interface('holder', {
   getLocalAddress: M.call().returns(M.any()),
   send: M.call(M.any(), M.any()).returns(M.any()),
-  sendGmp: M.call(M.any(), M.any()).returns(M.any()),
+  sendGmp: M.call(M.any(), M.any()).returns(VowShape),
   fundLCA: M.call(M.any(), M.any()).returns(VowShape),
 });
 harden(EVMI);

@@ -7,6 +7,7 @@
     "start:chain": "docker run -d --name agoric -p 26657:26657 -p 1317:1317 -p 9090:9090 ghcr.io/agoric/agoric-3-proposals:latest",
     "build": "bash build-gmp.sh",
     "deploy": "yarn build && runInsideContainer=true net=devnet planFile=startContract-plan.json node deploy.js",
+    "upgrade": "bash build-upgrade.sh && runInsideContainer=true net=devnet planFile=upgradeContract-plan.json node deploy.js",
     "offer": "node scripts/send-offer.mjs",
     "gmp": "node scripts/sendGmp.mjs"
   },

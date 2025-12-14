@@ -1,3 +1,7 @@
 startContract-permit.json
 startContract-plan.json
 startContract.js
+
+upgradeContract-permit.json
+upgradeContract-plan.json
+upgradeContract.js

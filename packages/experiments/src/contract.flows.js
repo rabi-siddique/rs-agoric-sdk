@@ -1,6 +1,5 @@
 import { makeTracer } from '@agoric/internal';
 import { Fail } from '@endo/errors';
-import { denomHash } from '@agoric/orchestration/src/utils/denomHash.js';
 
 /**
  * @import {GuestInterface} from '@agoric/async-flow';
@@ -58,7 +57,9 @@ export const createLCA = async (
   // Then perform the transfer
   await evmAccountKit.holder.sendGmp(seat, offerArgs);
 
-  seat.exit();
+  if (!seat.hasExited()) {
+    seat.exit();
+  }
   return harden({ invitationMakers: evmAccountKit.invitationMakers });
 };
 harden(createLCA);
