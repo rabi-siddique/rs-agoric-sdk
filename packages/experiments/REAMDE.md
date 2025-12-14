@@ -35,3 +35,7 @@
 - Danger result: Baggage corruption = ALL data lost
 
 ---
+
+## References
+- [Contract Upgrades](https://docs.agoric.com/guides/zoe/contract-upgrade#kinds)
+- [init specifying state](https://docs.agoric.com/guides/zoe/contract-details.html#init-specifying-state)
