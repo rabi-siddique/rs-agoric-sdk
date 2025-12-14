@@ -10,7 +10,7 @@ const FROM_ADDRESS = 'agoric1ee9hr0jyrxhy999y755mp862ljgycmwyp4pl7q';
 const { log, error } = console;
 
 // The offer ID from the previous createlcaAndGmp offer
-const PREVIOUS_OFFER_ID = 'offer-1765713233618';
+const PREVIOUS_OFFER_ID = 'offer-1765719250677';
 
 try {
   log('--- Sending GMP Message via InvitationMakers ---');
